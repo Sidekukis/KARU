@@ -1,0 +1,70 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/container-queries";
+
+@theme {
+  --color-on-background: #191c1d;
+  --color-background: #f8f9fa;
+  --color-surface-bright: #f8f9fa;
+  --color-error: #ba1a1a;
+  --color-outline: #717973;
+  --color-surface-container-high: #e7e8e9;
+  --color-primary-fixed-dim: #a5d0b9;
+  --color-outline-variant: #c1c8c2;
+  --color-on-tertiary-fixed: #092012;
+  --color-on-tertiary-container: #93ad98;
+  --color-surface-tint: #3f6653;
+  --color-on-surface-variant: #414844;
+  --color-on-error-container: #93000a;
+  --color-secondary-container: #b0f1cc;
+  --color-on-primary: #ffffff;
+  --color-secondary-fixed-dim: #94d4b1;
+  --color-inverse-surface: #2e3132;
+  --color-surface-variant: #e1e3e4;
+  --color-on-tertiary-fixed-variant: #354c3b;
+  --color-secondary: #2b694d;
+  --color-on-tertiary: #ffffff;
+  --color-primary: #012d1d;
+  --color-inverse-on-surface: #f0f1f2;
+  --color-on-error: #ffffff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-dim: #d9dadb;
+  --color-on-secondary-fixed-variant: #0c5136;
+  --color-surface-container-highest: #e1e3e4;
+  --color-tertiary: #152b1c;
+  --color-on-secondary-fixed: #002113;
+  --color-on-primary-container: #86af99;
+  --color-on-secondary-container: #327053;
+  --color-tertiary-container: #2a4131;
+  --color-inverse-primary: #a5d0b9;
+  --color-surface: #f8f9fa;
+  --color-on-primary-fixed-variant: #274e3d;
+  --color-on-primary-fixed: #002114;
+  --color-on-secondary: #ffffff;
+  --color-secondary-fixed: #b0f1cc;
+  --color-surface-container-low: #f3f4f5;
+  --color-primary-fixed: #c1ecd4;
+  --color-tertiary-fixed-dim: #b3cdb7;
+  --color-surface-container: #edeeef;
+  --color-on-surface: #191c1d;
+  --color-error-container: #ffdad6;
+  --color-primary-container: #1b4332;
+  --color-tertiary-fixed: #cee9d3;
+
+  --font-headline: Manrope, sans-serif;
+  --font-body: Inter, sans-serif;
+  --font-label: Inter, sans-serif;
+}
+
+@layer utilities {
+  .text-shadow-md {
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined' !important;
+  font-weight: normal;
+  font-style: normal;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
