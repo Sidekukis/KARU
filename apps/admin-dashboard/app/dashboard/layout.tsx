@@ -73,13 +73,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen bg-background text-on-surface font-body overflow-hidden">
       {/* SideNavBar Shell */}
       <aside className={`fixed left-0 top-0 h-full w-64 bg-emerald-950 dark:bg-slate-950 flex flex-col z-50 overflow-y-auto transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="px-6 py-8 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary-fixed rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-xl">nature_people</span>
+        <div className="px-5 py-6 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-[72px] h-[72px] shrink-0 flex items-center justify-center -ml-2">
+              <img src="/logo-karu.png" alt="Logo KARU" className="w-full h-full object-contain drop-shadow-lg scale-110" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-emerald-50 font-headline font-bold text-2xl tracking-tight uppercase leading-none mt-1">KARU</span>
+            <div className="flex flex-col justify-center pt-1">
+              <span className="text-emerald-50 font-headline font-black text-3xl tracking-tight uppercase leading-none">KARU</span>
               <span className="text-[10px] uppercase tracking-widest text-emerald-400/80 font-bold mt-1">Ekologi Presisi</span>
             </div>
           </div>
@@ -177,7 +177,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
             <div className="h-8 w-[1px] bg-slate-200/80 mx-1"></div>
             <div className="relative">
-              <div 
+              <div
                 className="flex items-center gap-3 pl-2 cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
               >
