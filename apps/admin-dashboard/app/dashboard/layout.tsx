@@ -206,7 +206,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       </Link>
                     </div>
                     <div className="p-2 border-t border-outline-variant/10">
-                      <Link href="/login" className="flex items-center justify-between px-3 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                      <Link href="/" className="flex items-center justify-between px-3 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
                         Keluar Aplikasi <span className="material-symbols-outlined text-[18px]">logout</span>
                       </Link>
                     </div>
