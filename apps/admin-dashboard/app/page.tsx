@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 // import Image from "next/image"; // Used standard img for now because of external URL
 
 export default function LoginPage() {
@@ -140,8 +139,8 @@ export default function LoginPage() {
 
           {/* Footer Support */}
           <footer className="mt-10 pt-6 border-t border-surface-container-high text-center">
-            <p className="text-sm text-on-surface-variant">
-              Belum punya akun? <Link href="/register" className="font-bold text-secondary hover:underline text-sm">Daftar sekarang</Link>
+            <p className="text-xs text-on-surface-variant/60 font-medium">
+              Akses hanya untuk pengguna terdaftar.<br />Hubungi administrator jika Anda belum memiliki akun.
             </p>
           </footer>
         </div>

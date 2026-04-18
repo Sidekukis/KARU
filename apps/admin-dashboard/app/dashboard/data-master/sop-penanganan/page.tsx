@@ -16,7 +16,7 @@ export default function SopPenangananPage() {
             <span className="absolute inset-y-0 left-3 flex items-center text-slate-400 group-focus-within:text-primary transition-colors">
               <span className="material-symbols-outlined text-sm">search</span>
             </span>
-            <input className="bg-surface-container-highest border-none rounded-xl pl-10 pr-4 py-2.5 w-full md:w-64 focus:ring-2 focus:ring-surface-tint focus:ring-offset-2 transition-all text-sm" placeholder="Cari dokumen SOP..." type="text"/>
+            <input className="bg-surface-container-highest border-none rounded-xl pl-10 pr-4 py-2.5 w-full md:w-64 focus:ring-2 focus:ring-surface-tint focus:ring-offset-2 transition-all text-sm" placeholder="Cari dokumen SOP..." type="text" />
           </div>
           <button className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-primary-container text-white rounded-xl shadow-lg shadow-primary/10 hover:opacity-90 transition-all active:scale-95 font-semibold text-sm whitespace-nowrap">
             <span className="material-symbols-outlined text-sm">add_circle</span>
@@ -25,8 +25,8 @@ export default function SopPenangananPage() {
         </div>
       </div>
 
-       {/* Category Filters */}
-       <div className="flex items-center gap-3 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+      {/* Category Filters */}
+      <div className="flex items-center gap-3 mb-8 overflow-x-auto pb-2 scrollbar-hide">
         <button className="px-5 py-2 bg-primary text-white rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0">Semua Dokumen</button>
         <button className="px-5 py-2 bg-surface-container-lowest border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high transition-colors rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0">Pengendalian Hama</button>
         <button className="px-5 py-2 bg-surface-container-lowest border border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high transition-colors rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0">Pemeliharaan Teknis</button>
@@ -125,7 +125,7 @@ export default function SopPenangananPage() {
         </div>
 
         {/* Card 5: Teknis */}
-         <div className="bg-surface-container-lowest border border-outline-variant/10 rounded-2xl p-6 flex flex-col hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300 group">
+        <div className="bg-surface-container-lowest border border-outline-variant/10 rounded-2xl p-6 flex flex-col hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300 group">
           <div className="flex justify-between items-start mb-5">
             <div className="p-3 bg-tertiary-fixed-dim/30 text-on-tertiary-fixed-variant rounded-xl">
               <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>settings_input_component</span>
@@ -147,7 +147,7 @@ export default function SopPenangananPage() {
         </div>
 
         {/* Card 6: Hama */}
-         <div className="bg-surface-container-lowest border border-outline-variant/10 rounded-2xl p-6 flex flex-col hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300 group">
+        <div className="bg-surface-container-lowest border border-outline-variant/10 rounded-2xl p-6 flex flex-col hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300 group">
           <div className="flex justify-between items-start mb-5">
             <div className="p-3 bg-secondary-container/30 text-on-secondary-container rounded-xl">
               <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>forest</span>
@@ -180,16 +180,6 @@ export default function SopPenangananPage() {
           Muat Lebih Banyak
         </button>
       </div>
-
-      {/* Footer / Branding */}
-      <footer className="pt-8 flex flex-col md:flex-row justify-between items-center text-[11px] text-slate-400 font-medium gap-4">
-        <p>© 2024 KARU Precision Ecology System. Hak Cipta Dilindungi.</p>
-        <div className="flex gap-6">
-          <a className="hover:text-primary transition-colors" href="#">Kebijakan Privasi</a>
-          <a className="hover:text-primary transition-colors" href="#">Syarat &amp; Ketentuan</a>
-          <a className="hover:text-primary transition-colors" href="#">Pusat Bantuan</a>
-        </div>
-      </footer>
     </div>
   );
 }
