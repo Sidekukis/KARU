@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 export default function DashboardPage() {
   return (
@@ -247,9 +248,9 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-          <button className="w-full mt-8 py-3 text-xs font-bold text-emerald-700 hover:bg-emerald-50 transition-colors rounded-xl border border-dashed border-emerald-200">
+          <Link href="/dashboard/log-aktivitas" className="block text-center w-full mt-8 py-3 text-xs font-bold text-emerald-700 hover:bg-emerald-50 transition-colors rounded-xl border border-dashed border-emerald-200">
             Lihat Log Audit
-          </button>
+          </Link>
         </div>
       </section>
 

@@ -67,6 +67,9 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   } else if (pathname.includes('/users-access')) {
     breadcrumbCategory = 'Administrasi';
     breadcrumbPage = 'Pengguna & Akses';
+  } else if (pathname.includes('/log-aktivitas')) {
+    breadcrumbCategory = 'Administrasi';
+    breadcrumbPage = 'Log Aktivitas';
   } else if (pathname.includes('/profile')) {
     breadcrumbCategory = 'Pengaturan';
     breadcrumbPage = 'Profil Saya';
@@ -185,6 +188,11 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           <Link href="/dashboard/users-access" className={navLinkClass(isActivePrefix('/dashboard/users-access'))}>
             <span className="material-symbols-outlined">group</span>
             <span className="text-sm font-medium">Pengguna &amp; Akses</span>
+          </Link>
+
+          <Link href="/dashboard/log-aktivitas" className={navLinkClass(isActivePrefix('/dashboard/log-aktivitas'))}>
+            <span className="material-symbols-outlined">history</span>
+            <span className="text-sm font-medium">Log Aktivitas</span>
           </Link>
 
           <Link href="#" className="flex items-center gap-3 px-4 py-3 text-emerald-100/60 hover:text-emerald-50 hover:bg-emerald-900/20 transition-all duration-200">
