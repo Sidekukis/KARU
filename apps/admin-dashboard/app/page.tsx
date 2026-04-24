@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
 // import Image from "next/image"; // Used standard img for now because of external URL
 
 export default function LoginPage() {
@@ -9,11 +11,28 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login Details:", { email, password, remember });
-    // TODO: Implement actual authentication here
-    alert("Proses Autentikasi...");
+    setLoading(true);
+    setErrorMsg("");
+
+    const { data, error } = await signIn.email({
+      email,
+      password,
+      rememberMe: remember,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setErrorMsg(error.message || "Username atau password salah");
+    } else {
+      router.push("/dashboard");
+    }
   };
 
   return (
@@ -64,6 +83,11 @@ export default function LoginPage() {
           <header className="mb-8">
             <h3 className="font-headline text-2xl font-bold text-primary mb-2">Selamat Datang</h3>
             <p className="text-on-surface-variant font-medium text-sm">Silakan masuk untuk mengakses panel kendali presisi Anda.</p>
+            {errorMsg && (
+                <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-600 text-sm font-medium">
+                  {errorMsg}
+                </div>
+            )}
           </header>
 
           <form className="space-y-5" onSubmit={handleSubmit}>
@@ -130,10 +154,11 @@ export default function LoginPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full py-3 bg-gradient-to-r from-primary to-primary-container text-surface font-headline font-bold text-base rounded-xl shadow-lg shadow-primary/10 hover:shadow-primary/20 hover:brightness-110 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
+              disabled={loading}
+              className="w-full py-3 bg-gradient-to-r from-primary to-primary-container text-surface font-headline font-bold text-base rounded-xl shadow-lg shadow-primary/10 hover:shadow-primary/20 hover:brightness-110 active:scale-[0.98] transition-all flex justify-center items-center gap-2 disabled:opacity-70 disabled:pointer-events-none"
             >
-              Masuk ke Dashboard
-              <span className="material-symbols-outlined text-lg">arrow_forward</span>
+              {loading ? "Memverifikasi..." : "Masuk ke Dashboard"}
+              <span className="material-symbols-outlined text-lg">{loading ? "hourglass_empty" : "arrow_forward"}</span>
             </button>
           </form>
 

@@ -1,5 +1,4 @@
-import { pgTable, text, timestamp, varchar, integer, serial, jsonb, boolean } from 'drizzle-orm/pg-core';
-import { geographyPoint, geographyPolygon } from './postgis-types';
+import { pgTable, text, timestamp, varchar, integer, serial, jsonb, boolean, geometry } from 'drizzle-orm/pg-core';
 
 /* =========================================================================
    1. AUTHENTICATION (BetterAuth Base - Minimal required representation)
@@ -133,7 +132,7 @@ export const workspaces = pgTable('workspaces', {
 export const geofences = pgTable('geofences', {
   id: serial('id').primaryKey(),
   workspaceId: varchar('workspace_id', { length: 20 }).references(() => workspaces.id, { onDelete: 'cascade' }),
-  polygonInfo: geographyPolygon('polygon_info').notNull(), // Tipe custom PostGIS
+  polygonInfo: geometry('polygon_info', { type: 'polygon', mode: 'tuple', srid: 4326 }).notNull(),
 });
 
 /* =========================================================================
@@ -165,7 +164,7 @@ export const aiScanLogs = pgTable('ai_scan_logs', {
   userId: text('user_id').references(() => user.id),
   workspaceId: varchar('workspace_id', { length: 20 }).references(() => workspaces.id),
   qrNodeId: varchar('qr_node_id', { length: 100 }).references(() => qrNodes.id), // Opsional
-  location: geographyPoint('location').notNull(), // Tipe custom PostGIS Point
+  location: geometry('location', { type: 'point', mode: 'tuple', srid: 4326 }).notNull(),
   imageUrl: text('image_url'),
   validationStatus: varchar('validation_status', { length: 50 }), // Valid / Di Luar Batas
   diagnosisResult: varchar('diagnosis_result', { length: 255 }),
