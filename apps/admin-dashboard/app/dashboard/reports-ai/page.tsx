@@ -1,225 +1,584 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 
-export default function ReportsAIPage() {
+// ── Types ──────────────────────────────────────────────────────────────────────
+type StatusType = 'valid' | 'invalid';
+
+type ScanReport = {
+  id: string;
+  waktu: string;          // datetime string
+  analis: string;         // mobile user name
+  sampelGambar: string;   // image URL
+  koordinat: string;      // lat, lng text
+  status: StatusType;
+  diagnosisAI: string;    // short / concise
+  diagnosisDetail: string;// full AI explanation
+  alasanInvalid?: string; // only when invalid
+};
+
+// ── Mock Data ──────────────────────────────────────────────────────────────────
+const MOCK_REPORTS: ScanReport[] = [
+  {
+    id: 'SCAN-001',
+    waktu: '2026-04-26 14:23:45',
+    analis: 'Ahmad Yani',
+    sampelGambar:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuCpdCGRTt_czVoK4QB5oJaUltyWXvisjHA4_y0XmPNFRjI3IPZ81ibjes7OkWdJn04oFviWQm3yPOZg948lqnLRuDbLYKmG8gbs0AZoEi4qDhaBdDY19_jOcz4m_iLs4vWegSyp6XcPmEa0_7tZwRwgNZtTIfrOTsLbMCxaLSw_mjBViuevCNY_CaNdVyvxCDUkVHAT479D4inrC7dN5Pt_5-YxJzJUvD1_yvVSRtUJV12g1WVyibVdPR4QVKp1hyrkpmISGl8vn596',
+    koordinat: '-6.9175° S, 107.6191° E',
+    status: 'valid',
+    diagnosisAI: 'Negatif Patogen',
+    diagnosisDetail:
+      'Model AI tidak mendeteksi adanya tanda-tanda infestasi hama maupun penyakit pada sampel daun yang dikirimkan. Kondisi warna, tekstur, dan pola vena daun berada dalam rentang normal. Skor kepercayaan model: 97,3%.',
+  },
+  {
+    id: 'SCAN-002',
+    waktu: '2026-04-26 11:05:12',
+    analis: 'Siti Rahayu',
+    sampelGambar:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuBbcqYJpRlpbpmNvtjWtkInq1oFHwVTlHDo76-3SjOumxLu-QWGdEUHOvNyrO9Ixxyxsqls0bzTJMyI62LFC832YZGiuDmHDgx5wIeWnJwteeImd8KZzY_MmpRO8e0j3PQGNENO02cO7yPB7rmpsyqLF7GYS3oFKGop0xbrEIHlbPe3puvznVEENz4pdl8IZCHGYsAr596ylVRgdeWh9GKAQSnBQZKQitH_qWGylScGuG19pyObORSq9JALBvFa83RyulXDnCc-VY3y',
+    koordinat: '-6.9210° S, 107.6235° E',
+    status: 'invalid',
+    diagnosisAI: 'Koloni Kutu Daun (92%)',
+    diagnosisDetail:
+      'Model AI mendeteksi koloni kutu daun (Aphididae) pada permukaan bawah daun dengan probabilitas 92%. Ditemukan pola bintik hitam dan deformasi daun yang khas. Disarankan penanganan segera dengan insektisida berbahan aktif imidakloprid atau pymetrozine.',
+    alasanInvalid:
+      'Gambar dikirim di luar zona geofencing yang telah ditentukan. Koordinat tidak sesuai dengan area pemantauan yang terdaftar.',
+  },
+  {
+    id: 'SCAN-003',
+    waktu: '2026-04-25 16:58:30',
+    analis: 'Joko Widodo',
+    sampelGambar:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuAyWbx9BO08ncVVRbqVpJzuLj1wJhdwUSfAW628zWFM8Vw2T1SpQK6yCqDXVFA8v0LbG6TpFL4H_73G_H4aemb59ixnal4OekGH4UfxkBoXAvAp-3yixMAgVuDOoPVJIK2keOB03ge3DBzMuVJ7KqtaiGUDOGy_dsOvfZviKDSFrygLXsI8m5NmTW7eAaMzSLNNTln8ZCLLJvnx6foiDnjFT29tNl9K-H3ZVtFwnQgrdeL4uXAVPMEbiMeRyVUi1lhUwuDhd6iBddW8',
+    koordinat: '-6.9158° S, 107.6180° E',
+    status: 'valid',
+    diagnosisAI: 'Kesehatan Optimal',
+    diagnosisDetail:
+      'Kondisi tanaman sangat baik. Tidak ada indikasi serangan hama, jamur, atau virus. Klorofil tampak normal, tidak ada nekrosis atau klorosis. Skor kepercayaan model: 98,8%.',
+  },
+  {
+    id: 'SCAN-004',
+    waktu: '2026-04-25 09:30:00',
+    analis: 'Ahmad Yani',
+    sampelGambar:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuCpdCGRTt_czVoK4QB5oJaUltyWXvisjHA4_y0XmPNFRjI3IPZ81ibjes7OkWdJn04oFviWQm3yPOZg948lqnLRuDbLYKmG8gbs0AZoEi4qDhaBdDY19_jOcz4m_iLs4vWegSyp6XcPmEa0_7tZwRwgNZtTIfrOTsLbMCxaLSw_mjBViuevCNY_CaNdVyvxCDUkVHAT479D4inrC7dN5Pt_5-YxJzJUvD1_yvVSRtUJV12g1WVyibVdPR4QVKp1hyrkpmISGl8vn596',
+    koordinat: '-6.9175° S, 107.6191° E',
+    status: 'invalid',
+    diagnosisAI: 'Jamur Embun Tepung (78%)',
+    diagnosisDetail:
+      'Terdeteksi infeksi jamur Powdery Mildew (Erysiphaceae) pada area daun bagian atas. Serbuk putih halus terlihat menyebar pada 40–60% permukaan daun. Probabilitas deteksi: 78%. Rekomendasi: aplikasi fungisida berbahan aktif sulfur atau hexaconazole.',
+    alasanInvalid:
+      'Kualitas gambar terlalu rendah (blur) sehingga diagnosis AI tidak dapat dilakukan secara akurat. Pengguna diminta mengulang pengambilan gambar dengan pencahayaan yang memadai.',
+  },
+  {
+    id: 'SCAN-005',
+    waktu: '2026-04-24 19:47:22',
+    analis: 'Dewi Lestari',
+    sampelGambar:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuBbcqYJpRlpbpmNvtjWtkInq1oFHwVTlHDo76-3SjOumxLu-QWGdEUHOvNyrO9Ixxyxsqls0bzTJMyI62LFC832YZGiuDmHDgx5wIeWnJwteeImd8KZzY_MmpRO8e0j3PQGNENO02cO7yPB7rmpsyqLF7GYS3oFKGop0xbrEIHlbPe3puvznVEENz4pdl8IZCHGYsAr596ylVRgdeWh9GKAQSnBQZKQitH_qWGylScGuG19pyObORSq9JALBvFa83RyulXDnCc-VY3y',
+    koordinat: '-6.9200° S, 107.6210° E',
+    status: 'valid',
+    diagnosisAI: 'Bercak Daun Ringan (61%)',
+    diagnosisDetail:
+      'Teridentifikasi tanda awal bercak daun (Cercospora sp.) pada beberapa helai daun. Tingkat infeksi masih ringan dan belum mempengaruhi produktivitas secara signifikan. Probabilitas: 61%. Pantau perkembangan selama 3-5 hari ke depan.',
+  },
+  {
+    id: 'SCAN-006',
+    waktu: '2026-04-24 08:12:10',
+    analis: 'Rizky Firmansyah',
+    sampelGambar:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuAyWbx9BO08ncVVRbqVpJzuLj1wJhdwUSfAW628zWFM8Vw2T1SpQK6yCqDXVFA8v0LbG6TpFL4H_73G_H4aemb59ixnal4OekGH4UfxkBoXAvAp-3yixMAgVuDOoPVJIK2keOB03ge3DBzMuVJ7KqtaiGUDOGy_dsOvfZviKDSFrygLXsI8m5NmTW7eAaMzSLNNTln8ZCLLJvnx6foiDnjFT29tNl9K-H3ZVtFwnQgrdeL4uXAVPMEbiMeRyVUi1lhUwuDhd6iBddW8',
+    koordinat: '-6.9140° S, 107.6175° E',
+    status: 'valid',
+    diagnosisAI: 'Negatif Patogen',
+    diagnosisDetail:
+      'Tidak ditemukan indikasi penyakit atau hama. Kondisi tanaman sehat dan optimal. Skor kepercayaan: 95,1%.',
+  },
+];
+
+// ── Image Preview Modal ────────────────────────────────────────────────────────
+function ImagePreviewModal({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
   return (
-    <div className="p-4 md:p-8 space-y-8 max-w-[1600px] mx-auto w-full pb-20">
-
-      {/* Header Title and Tab Navigation */}
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-          <div>
-            <h2 className="text-3xl font-manrope font-extrabold text-emerald-950 tracking-tight">Laporan & Wawasan AI</h2>
-            <p className="text-slate-500 mt-1">Menganalisis metrik presisi dan indikator kesehatan ekologis.</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button className="px-4 py-2 bg-surface-container-low border border-outline-variant/30 text-emerald-900 rounded-xl text-sm font-semibold hover:bg-surface-container-high transition-all flex items-center gap-2 shadow-sm">
-              <span className="material-symbols-outlined text-sm">download</span> Ekspor PDF
-            </button>
-            <button className="px-6 py-2 bg-gradient-to-r from-primary to-primary-container text-white rounded-xl text-sm font-semibold shadow-md shadow-emerald-950/10 hover:shadow-emerald-950/20 transition-all flex items-center gap-2 hover:brightness-110 active:scale-95">
-              <span className="material-symbols-outlined text-sm">auto_awesome</span> Jalankan Pemindaian AI
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Advanced Filter Bar */}
-      <div className="bg-surface-container-lowest rounded-2xl p-5 flex flex-wrap items-center gap-5 shadow-sm border border-outline-variant/20">
-        <div className="flex-1 min-w-[220px]">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">Rentang Tanggal</label>
-          <div className="flex items-center gap-2 bg-slate-50 border border-outline-variant/20 px-4 py-2.5 rounded-xl text-sm text-slate-600 focus-within:ring-2 focus-within:ring-primary/20 transition-all cursor-pointer">
-            <span className="material-symbols-outlined text-[18px] text-slate-400">calendar_today</span>
-            <span className="font-medium font-mono">12 Okt 2023 - 19 Okt 2023</span>
-          </div>
-        </div>
-
-        <div className="flex-1 min-w-[180px]">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">Status Validasi</label>
-          <div className="relative">
-            <select className="w-full bg-slate-50 border border-outline-variant/20 rounded-xl py-2.5 pl-4 pr-10 text-sm text-slate-700 font-semibold focus:ring-2 focus:ring-primary/20 appearance-none outline-none transition-all">
-              <option>Semua Status</option>
-              <option>Valid</option>
-              <option>Di Luar Batas</option>
-            </select>
-            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-sm">expand_more</span>
-          </div>
-        </div>
-
-        <div className="flex-1 min-w-[200px]">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">Jenis Hama</label>
-          <div className="relative">
-            <select className="w-full bg-slate-50 border border-outline-variant/20 rounded-xl py-2.5 pl-4 pr-10 text-sm text-slate-700 font-semibold focus:ring-2 focus:ring-primary/20 appearance-none outline-none transition-all">
-              <option>Semua Hama</option>
-              <option>Deteksi Kutu Daun</option>
-              <option>Pengorok Daun</option>
-              <option>Penggerek Abu Zamrud</option>
-            </select>
-            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-sm">expand_more</span>
-          </div>
-        </div>
-
-        <div className="flex items-end h-full md:mt-[22px] justify-end">
-          <button className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100 hover:bg-emerald-100 hover:border-emerald-200 transition-all">
-            <span className="material-symbols-outlined text-[20px]">filter_list</span>
+    <>
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+        <div
+          className="relative max-w-2xl w-full"
+          onClick={(e) => e.stopPropagation()}
+          style={{ animation: 'scaleIn 0.2s ease-out' }}
+        >
+          <img src={src} alt={alt} className="w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl" />
+          <button
+            onClick={onClose}
+            className="absolute -top-3 -right-3 w-9 h-9 bg-white rounded-full shadow-lg flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors border border-slate-200"
+          >
+            <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
       </div>
+      <style>{`@keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }`}</style>
+    </>
+  );
+}
 
-      {/* High-Density Data Table */}
-      <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-outline-variant/20">
+// ── Detail Drawer ─────────────────────────────────────────────────────────────
+function DetailDrawer({ report, onClose }: { report: ScanReport; onClose: () => void }) {
+  const isValid = report.status === 'valid';
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-40" onClick={onClose} />
+      <div
+        className="fixed right-0 top-0 h-full w-full max-w-lg bg-white z-50 shadow-2xl flex flex-col overflow-hidden"
+        style={{ animation: 'slideInRight 0.25s ease-out' }}
+      >
+        {/* Header */}
+        <div className="flex-shrink-0 px-6 py-5 flex items-center justify-between border-b border-slate-100 bg-slate-50">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-emerald-600">
+              <span className="material-symbols-outlined text-white text-[18px]">biotech</span>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Detail Laporan AI</p>
+              <h2 className="text-sm font-manrope font-extrabold text-primary leading-tight">{report.id}</h2>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-primary transition-colors"
+          >
+            <span className="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          {/* Gambar */}
+          <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm aspect-video bg-slate-100">
+            <img src={report.sampelGambar} alt="Sampel" className="w-full h-full object-cover" />
+          </div>
+
+          {/* Meta grid */}
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { icon: 'schedule', label: 'Waktu Kirim', value: report.waktu },
+              { icon: 'person', label: 'Analis', value: report.analis },
+              { icon: 'location_on', label: 'Koordinat', value: report.koordinat },
+              {
+                icon: isValid ? 'check_circle' : 'cancel',
+                label: 'Status',
+                value: isValid ? 'Valid' : 'Invalid',
+              },
+            ].map((m) => (
+              <div key={m.label} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                <p className="text-[10px] font-bold text-slate-400 flex items-center gap-1 mb-1">
+                  <span className="material-symbols-outlined text-[12px]">{m.icon}</span>
+                  {m.label}
+                </p>
+                <p
+                  className={`text-sm font-bold leading-tight ${
+                    m.label === 'Status'
+                      ? isValid
+                        ? 'text-emerald-700'
+                        : 'text-rose-600'
+                      : 'text-slate-700'
+                  }`}
+                >
+                  {m.value}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Diagnosis AI */}
+          <div className={`rounded-xl p-4 border ${isValid ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[14px]">smart_toy</span>
+              Hasil Diagnosis AI
+            </p>
+            <p className={`text-sm font-bold mb-2 ${isValid ? 'text-emerald-800' : 'text-amber-800'}`}>
+              {report.diagnosisAI}
+            </p>
+            <p className="text-xs text-slate-600 leading-relaxed">{report.diagnosisDetail}</p>
+          </div>
+
+          {/* Alasan Invalid */}
+          {!isValid && report.alasanInvalid && (
+            <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 flex items-start gap-3">
+              <span
+                className="material-symbols-outlined text-rose-500 text-[20px] flex-shrink-0 mt-0.5"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                warning
+              </span>
+              <div>
+                <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider mb-1">Alasan Status Invalid</p>
+                <p className="text-xs text-rose-700 font-semibold leading-relaxed">{report.alasanInvalid}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex-shrink-0 p-5 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full flex items-center justify-center gap-2 py-3 border-2 border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[18px]">close</span>
+            Tutup
+          </button>
+        </div>
+      </div>
+      <style>{`@keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
+    </>
+  );
+}
+
+// ── Delete Confirm Dialog ─────────────────────────────────────────────────────
+function DeleteDialog({ report, onConfirm, onCancel }: { report: ScanReport; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-[3px] z-50" onClick={onCancel} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm" style={{ animation: 'scaleIn 0.18s ease-out' }}>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <span className="material-symbols-outlined text-red-600 text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>delete_forever</span>
+            </div>
+            <div>
+              <h3 className="font-manrope font-extrabold text-primary text-base">Hapus Laporan?</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Tindakan ini tidak bisa dibatalkan.</p>
+            </div>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 mb-5 space-y-0.5">
+            <p className="text-sm font-bold text-slate-700">{report.id}</p>
+            <p className="text-xs text-slate-400">Dikirim oleh <span className="font-semibold text-slate-600">{report.analis}</span> pada {report.waktu}</p>
+          </div>
+          <div className="flex gap-3">
+            <button type="button" onClick={onCancel} className="flex-1 py-2.5 border-2 border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors">Batal</button>
+            <button type="button" onClick={onConfirm} className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors shadow-md">Ya, Hapus</button>
+          </div>
+        </div>
+      </div>
+      <style>{`@keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }`}</style>
+    </>
+  );
+}
+
+// ── Helper: initials avatar ────────────────────────────────────────────────────
+function AnalystBadge({ name }: { name: string }) {
+  const initials = name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] font-bold text-emerald-700 border border-emerald-200 shadow-sm flex-shrink-0">
+        {initials}
+      </div>
+      <span className="text-sm font-bold text-primary">{name}</span>
+    </div>
+  );
+}
+
+// ── Main Page ──────────────────────────────────────────────────────────────────
+export default function ReportsAIPage() {
+  const [reports, setReports] = useState<ScanReport[]>(MOCK_REPORTS);
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'semua' | StatusType>('semua');
+  const [filterPeriod, setFilterPeriod] = useState('7d');
+  const [deleteTarget, setDeleteTarget] = useState<ScanReport | null>(null);
+  const [detailTarget, setDetailTarget] = useState<ScanReport | null>(null);
+  const [previewImg, setPreviewImg] = useState<{ src: string; alt: string } | null>(null);
+
+  const filtered = useMemo(() => {
+    return reports.filter((r) => {
+      const matchSearch =
+        r.analis.toLowerCase().includes(search.toLowerCase()) ||
+        r.id.toLowerCase().includes(search.toLowerCase()) ||
+        r.diagnosisAI.toLowerCase().includes(search.toLowerCase()) ||
+        r.koordinat.toLowerCase().includes(search.toLowerCase());
+      const matchStatus = filterStatus === 'semua' || r.status === filterStatus;
+      return matchSearch && matchStatus;
+    });
+  }, [reports, search, filterStatus]);
+
+  const totalValid = reports.filter((r) => r.status === 'valid').length;
+  const totalInvalid = reports.filter((r) => r.status === 'invalid').length;
+
+  const handleDelete = () => {
+    if (!deleteTarget) return;
+    setReports((prev) => prev.filter((r) => r.id !== deleteTarget.id));
+    setDeleteTarget(null);
+  };
+
+  return (
+    <div className="p-4 md:p-8 space-y-8 max-w-[1600px] mx-auto w-full pb-20">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-outline-variant/10 pb-6">
+        <div>
+          <h1 className="text-3xl font-manrope font-extrabold text-emerald-950 tracking-tight">Laporan &amp; Wawasan AI</h1>
+          <p className="text-slate-500 mt-1 max-w-xl">
+            Data laporan dikirim langsung dari pengguna mobile KARU beserta hasil diagnosis AI.
+          </p>
+        </div>
+        <button className="flex items-center gap-2 px-5 py-2.5 border-2 border-slate-200 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors whitespace-nowrap">
+          <span className="material-symbols-outlined text-[18px]">download</span>
+          Ekspor Laporan
+        </button>
+      </div>
+
+      {/* ── Stats Cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          {
+            label: 'Total Laporan',
+            value: reports.length,
+            icon: 'description',
+            bg: 'bg-slate-50',
+            color: 'text-slate-700',
+            border: 'border-slate-100',
+            sub: 'Semua laporan masuk',
+          },
+          {
+            label: 'Valid',
+            value: totalValid,
+            icon: 'check_circle',
+            bg: 'bg-emerald-50',
+            color: 'text-emerald-700',
+            border: 'border-emerald-100',
+            sub: 'Terverifikasi sistem',
+          },
+          {
+            label: 'Invalid',
+            value: totalInvalid,
+            icon: 'cancel',
+            bg: 'bg-rose-50',
+            color: 'text-rose-600',
+            border: 'border-rose-100',
+            sub: 'Perlu perhatian',
+          },
+          {
+            label: 'Rata-rata / Hari',
+            value: Math.round(reports.length / 7),
+            icon: 'analytics',
+            bg: 'bg-amber-50',
+            color: 'text-amber-700',
+            border: 'border-amber-100',
+            sub: '7 hari terakhir',
+          },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className={`bg-white rounded-2xl p-5 border ${s.border} shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow`}
+          >
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${s.bg}`}>
+              <span className={`material-symbols-outlined text-[24px] ${s.color}`} style={{ fontVariationSettings: "'FILL' 1" }}>
+                {s.icon}
+              </span>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{s.label}</p>
+              <p className={`text-2xl font-manrope font-extrabold ${s.color}`}>{s.value}</p>
+              <p className="text-[10px] text-slate-400 font-medium mt-0.5">{s.sub}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Filter Bar ── */}
+      <div className="bg-white rounded-2xl p-4 flex flex-wrap items-center gap-3 shadow-sm border border-slate-100">
+        {/* Search */}
+        <div className="relative flex-1 min-w-[220px]">
+          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari analis, ID laporan, diagnosis..."
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Status Tabs */}
+          <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+            {([
+              { key: 'semua', label: 'Semua' },
+              { key: 'valid', label: 'Valid' },
+              { key: 'invalid', label: 'Invalid' },
+            ] as const).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setFilterStatus(tab.key)}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
+                  filterStatus === tab.key
+                    ? 'bg-white text-slate-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Periode */}
+          <div className="relative">
+            <select
+              value={filterPeriod}
+              onChange={(e) => setFilterPeriod(e.target.value)}
+              className="bg-slate-100 border-0 rounded-xl py-2 pl-3 pr-7 text-[11px] font-bold text-slate-600 focus:ring-2 focus:ring-primary/20 outline-none appearance-none"
+            >
+              <option value="7d">7 Hari Terakhir</option>
+              <option value="30d">30 Hari Terakhir</option>
+              <option value="all">Semua Waktu</option>
+            </select>
+            <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[14px]">expand_more</span>
+          </div>
+        </div>
+
+        <p className="text-[11px] text-slate-400 font-medium ml-auto">{filtered.length} laporan ditemukan</p>
+      </div>
+
+      {/* ── Table ── */}
+      <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
-              <tr className="bg-surface-container-lowest border-b border-outline-variant/10">
-                <th className="px-6 py-4 text-xs font-manrope font-bold text-slate-400 uppercase tracking-widest w-[120px]">Cap Waktu</th>
-                <th className="px-6 py-4 text-xs font-manrope font-bold text-slate-400 uppercase tracking-widest min-w-[150px]">Analis</th>
-                <th className="px-6 py-4 text-xs font-manrope font-bold text-slate-400 uppercase tracking-widest min-w-[120px]">Sampel Gambar</th>
-                <th className="px-6 py-4 text-xs font-manrope font-bold text-slate-400 uppercase tracking-widest">Koordinat</th>
-                <th className="px-6 py-4 text-xs font-manrope font-bold text-slate-400 uppercase tracking-widest">Status</th>
-                <th className="px-6 py-4 text-xs font-manrope font-bold text-slate-400 uppercase tracking-widest min-w-[250px]">Diagnosis AI</th>
-                <th className="px-6 py-4 text-xs font-manrope font-bold text-slate-400 uppercase tracking-widest w-[50px]"></th>
+              <tr className="bg-slate-50 border-b border-slate-100">
+                <th className="px-6 py-4 text-[10px] font-manrope font-bold text-slate-400 uppercase tracking-widest w-[170px]">Waktu</th>
+                <th className="px-6 py-4 text-[10px] font-manrope font-bold text-slate-400 uppercase tracking-widest min-w-[160px]">Analis</th>
+                <th className="px-6 py-4 text-[10px] font-manrope font-bold text-slate-400 uppercase tracking-widest w-[110px]">Sampel Gambar</th>
+                <th className="px-6 py-4 text-[10px] font-manrope font-bold text-slate-400 uppercase tracking-widest min-w-[160px]">Koordinat</th>
+                <th className="px-6 py-4 text-[10px] font-manrope font-bold text-slate-400 uppercase tracking-widest w-[110px]">Status</th>
+                <th className="px-6 py-4 text-[10px] font-manrope font-bold text-slate-400 uppercase tracking-widest min-w-[200px]">Diagnosis AI</th>
+                <th className="px-6 py-4 text-[10px] font-manrope font-bold text-slate-400 uppercase tracking-widest text-right w-[110px]">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-outline-variant/10 bg-white">
-              {/* Row 1 */}
-              <tr className="hover:bg-slate-50/70 transition-colors group">
-                <td className="px-6 py-4">
-                  <p className="text-sm font-bold text-emerald-950 font-mono">19-10-2023</p>
-                  <p className="text-[11px] font-bold text-slate-400 font-mono mt-0.5">14:23:45 UTC</p>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <img alt="Pengguna" className="w-8 h-8 rounded-full object-cover ring-2 ring-emerald-50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDyexDSQKcFrPuF0cq2Ztn_anNc7-_5aKm1ICfiHCDOCHfGRZ1TlhUgATtwAeD9HIfbzM-x1If8cxfzZYcyej6_GnLmS3fFOfJKVsFiuca0vW8QwBS4SUDwT3W9R9_p1d0X9D4Cof43JLi6p8u4LG5rA6bOxHIJl9CQLomXsRJ4lA2IxjCbt_qZvXfrfGyjfQs84mTypKpuaXLjP0CcekMX2RoTm6JfGSTHdLdjqHLuZ8CaK6qrDF_tCYlte4KbxLLB7GrYsKr5bNgC" />
-                    <span className="text-sm font-bold text-primary">Sarah Jenkins</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="w-16 h-10 rounded-lg overflow-hidden bg-slate-100 relative group cursor-pointer ring-1 ring-slate-200 hover:ring-emerald-300 transition-all">
-                    <img alt="Sampel daun" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpdCGRTt_czVoK4QB5oJaUltyWXvisjHA4_y0XmPNFRjI3IPZ81ibjes7OkWdJn04oFviWQm3yPOZg948lqnLRuDbLYKmG8gbs0AZoEi4qDhaBdDY19_jOcz4m_iLs4vWegSyp6XcPmEa0_7tZwRwgNZtTIfrOTsLbMCxaLSw_mjBViuevCNY_CaNdVyvxCDUkVHAT479D4inrC7dN5Pt_5-YxJzJUvD1_yvVSRtUJV12g1WVyibVdPR4QVKp1hyrkpmISGl8vn596" />
-                    <div className="absolute inset-0 bg-emerald-900/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-[1px]">
-                      <span className="material-symbols-outlined text-white text-[18px]">visibility</span>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="text-[11px] font-bold font-mono bg-slate-100 px-2.5 py-1.5 rounded-md text-slate-600 border border-slate-200">45.523° N, 122.676° W</span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100 gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Valid
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2.5">
-                    <span className="material-symbols-outlined text-emerald-500 text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                    <span className="text-sm font-bold text-emerald-950">Negatif Patogen</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-emerald-700 bg-white hover:bg-emerald-50 rounded-lg transition-all mx-auto opacity-0 group-hover:opacity-100 shadow-sm border border-transparent hover:border-emerald-100">
-                    <span className="material-symbols-outlined text-[20px]">more_vert</span>
-                  </button>
-                </td>
-              </tr>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-20 text-center">
+                    <span className="material-symbols-outlined text-5xl text-slate-200 mb-3 block">manage_search</span>
+                    <p className="text-slate-400 font-bold text-sm">Tidak ada laporan yang cocok.</p>
+                    <button
+                      type="button"
+                      onClick={() => { setSearch(''); setFilterStatus('semua'); }}
+                      className="mt-2 text-xs text-emerald-600 font-bold hover:underline"
+                    >
+                      Reset filter
+                    </button>
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((report) => (
+                  <tr key={report.id} className="hover:bg-slate-50/70 transition-colors group">
 
-              {/* Row 2 */}
-              <tr className="hover:bg-slate-50/70 transition-colors group">
-                <td className="px-6 py-4">
-                  <p className="text-sm font-bold text-emerald-950 font-mono">19-10-2023</p>
-                  <p className="text-[11px] font-bold text-slate-400 font-mono mt-0.5">11:05:12 UTC</p>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <img alt="Pengguna" className="w-8 h-8 rounded-full object-cover ring-2 ring-emerald-50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJwHmea9t-lHzA70BNEq3_QZEDtWByy_IaOJrRdAtv-1Ne8kSnabju9mfHV2v3lRy4-5TV_XhNwN-vkh_VnSosYS-ZdRA18XG0u_MqDBqMIMRvbTRZ_2KYxQxV85JsULIiTKj4XiiyajLayETa46wMGwCZ9WIf7v5LSvsCRIdrCniB8aIYXdCtfS468GtXPFkqMcvj2i45f-G0uTdDhrF7or1XUE0CyuBVe4wY24xLt8m06DSQxOffthqOmLWDgGA-grzkJiQL8FIe" />
-                    <span className="text-sm font-bold text-primary">Marcus Chen</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="w-16 h-10 rounded-lg overflow-hidden bg-slate-100 relative group cursor-pointer ring-1 ring-slate-200 hover:ring-amber-300 transition-all">
-                    <img alt="Sampel daun" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBbcqYJpRlpbpmNvtjWtkInq1oFHwVTlHDo76-3SjOumxLu-QWGdEUHOvNyrO9Ixxyxsqls0bzTJMyI62LFC832YZGiuDmHDgx5wIeWnJwteeImd8KZzY_MmpRO8e0j3PQGNENO02cO7yPB7rmpsyqLF7GYS3oFKGop0xbrEIHlbPe3puvznVEENz4pdl8IZCHGYsAr596ylVRgdeWh9GKAQSnBQZKQitH_qWGylScGuG19pyObORSq9JALBvFa83RyulXDnCc-VY3y" />
-                    <div className="absolute inset-0 bg-amber-900/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-[1px]">
-                      <span className="material-symbols-outlined text-white text-[18px]">visibility</span>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="text-[11px] font-bold font-mono bg-slate-100 px-2.5 py-1.5 rounded-md text-slate-600 border border-slate-200">45.521° N, 122.672° W</span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-100 gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Di Luar Batas
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2.5">
-                    <span className="material-symbols-outlined text-amber-500 text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
-                    <span className="text-sm font-bold text-amber-950 flex flex-col sm:block">Koloni Kutu Daun <span className="text-amber-700/80">(Prob. 92%)</span></span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-emerald-700 bg-white hover:bg-emerald-50 rounded-lg transition-all mx-auto opacity-0 group-hover:opacity-100 shadow-sm border border-transparent hover:border-emerald-100">
-                    <span className="material-symbols-outlined text-[20px]">more_vert</span>
-                  </button>
-                </td>
-              </tr>
+                    {/* Waktu */}
+                    <td className="px-6 py-4">
+                      <p className="text-xs font-bold text-slate-700 font-mono">
+                        {report.waktu.split(' ')[0]}
+                      </p>
+                      <p className="text-[11px] font-bold text-slate-400 font-mono mt-0.5">
+                        {report.waktu.split(' ')[1]}
+                      </p>
+                    </td>
 
-              {/* Row 3 */}
-              <tr className="hover:bg-slate-50/70 transition-colors group">
-                <td className="px-6 py-4">
-                  <p className="text-sm font-bold text-emerald-950 font-mono">18-10-2023</p>
-                  <p className="text-[11px] font-bold text-slate-400 font-mono mt-0.5">16:58:30 UTC</p>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] font-bold text-emerald-700 ring-2 ring-emerald-50 border border-emerald-200 shadow-sm">ET</div>
-                    <span className="text-sm font-bold text-primary">Elena Turov</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="w-16 h-10 rounded-lg overflow-hidden bg-slate-100 relative group cursor-pointer ring-1 ring-slate-200 hover:ring-emerald-300 transition-all">
-                    <img alt="Sampel daun" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyWbx9BO08ncVVRbqVpJzuLj1wJhdwUSfAW628zWFM8Vw2T1SpQK6yCqDXVFA8v0LbG6TpFL4H_73G_H4aemb59ixnal4OekGH4UfxkBoXAvAp-3yixMAgVuDOoPVJIK2keOB03ge3DBzMuVJ7KqtaiGUDOGy_dsOvfZviKDSFrygLXsI8m5NmTW7eAaMzSLNNTln8ZCLLJvnx6foiDnjFT29tNl9K-H3ZVtFwnQgrdeL4uXAVPMEbiMeRyVUi1lhUwuDhd6iBddW8" />
-                    <div className="absolute inset-0 bg-emerald-900/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-[1px]">
-                      <span className="material-symbols-outlined text-white text-[18px]">visibility</span>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="text-[11px] font-bold font-mono bg-slate-100 px-2.5 py-1.5 rounded-md text-slate-600 border border-slate-200">45.525° N, 122.680° W</span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100 gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Valid
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2.5">
-                    <span className="material-symbols-outlined text-emerald-500 text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                    <span className="text-sm font-bold text-emerald-950">Kesehatan Optimal</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-emerald-700 bg-white hover:bg-emerald-50 rounded-lg transition-all mx-auto opacity-0 group-hover:opacity-100 shadow-sm border border-transparent hover:border-emerald-100">
-                    <span className="material-symbols-outlined text-[20px]">more_vert</span>
-                  </button>
-                </td>
-              </tr>
+                    {/* Analis */}
+                    <td className="px-6 py-4">
+                      <AnalystBadge name={report.analis} />
+                    </td>
+
+                    {/* Sampel Gambar */}
+                    <td className="px-6 py-4">
+                      <div
+                        className="w-16 h-10 rounded-lg overflow-hidden bg-slate-100 relative cursor-pointer ring-1 ring-slate-200 hover:ring-emerald-300 transition-all"
+                        onClick={() => setPreviewImg({ src: report.sampelGambar, alt: `Sampel ${report.id}` })}
+                      >
+                        <img alt={`Sampel ${report.id}`} className="w-full h-full object-cover" src={report.sampelGambar} />
+                        <div className="absolute inset-0 bg-emerald-900/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-[1px]">
+                          <span className="material-symbols-outlined text-white text-[16px]">zoom_in</span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Koordinat */}
+                    <td className="px-6 py-4">
+                      <span className="text-[11px] font-bold font-mono bg-slate-100 px-2.5 py-1.5 rounded-md text-slate-600 border border-slate-200 whitespace-nowrap">
+                        {report.koordinat}
+                      </span>
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-6 py-4">
+                      {report.status === 'valid' ? (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100 gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          Valid
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-100 gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                          Invalid
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Diagnosis AI */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`material-symbols-outlined text-[17px] flex-shrink-0 ${report.status === 'valid' ? 'text-emerald-500' : 'text-amber-500'}`}
+                          style={{ fontVariationSettings: "'FILL' 1" }}
+                        >
+                          {report.status === 'valid' ? 'check_circle' : 'warning'}
+                        </span>
+                        <span className="text-sm font-bold text-slate-800 leading-tight">{report.diagnosisAI}</span>
+                      </div>
+                    </td>
+
+                    {/* Aksi */}
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Lihat Detail */}
+                        <button
+                          type="button"
+                          onClick={() => setDetailTarget(report)}
+                          className="p-2 text-slate-400 hover:text-primary hover:bg-emerald-50 rounded-lg transition-all border border-transparent hover:border-emerald-100"
+                          title="Lihat Detail"
+                        >
+                          <span className="material-symbols-outlined text-[17px]">info</span>
+                        </button>
+
+                        {/* Hapus */}
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(report)}
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all border border-transparent hover:border-rose-100"
+                          title="Hapus Laporan"
+                        >
+                          <span className="material-symbols-outlined text-[17px]">delete</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
         {/* Pagination Footer */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-outline-variant/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-slate-500 font-medium">Menampilkan <span className="font-bold text-slate-700">1-10</span> dari 1.240 rekaman</p>
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs text-slate-500 font-medium">
+            Menampilkan <span className="font-bold text-slate-700">{filtered.length}</span> dari{' '}
+            <span className="font-bold text-slate-700">{reports.length}</span> laporan
+          </p>
           <div className="flex items-center gap-1.5">
             <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-sm">
               <span className="material-symbols-outlined text-[18px]">chevron_left</span>
             </button>
             <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-emerald-950 text-white text-xs font-bold shadow-md shadow-emerald-950/20">1</button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 hover:text-emerald-700 transition-all shadow-sm">2</button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 hover:text-emerald-700 transition-all shadow-sm">3</button>
-            <span className="text-slate-400 text-xs px-1 font-bold">...</span>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 hover:text-emerald-700 transition-all shadow-sm">124</button>
             <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-sm">
               <span className="material-symbols-outlined text-[18px]">chevron_right</span>
             </button>
@@ -227,89 +586,16 @@ export default function ReportsAIPage() {
         </div>
       </div>
 
-      {/* AI Snapshot Widgets (Bento Style) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-        {/* Widget 1 */}
-        <div className="bg-emerald-950 p-7 rounded-3xl relative overflow-hidden group shadow-lg shadow-emerald-950/10 hover:-translate-y-1 transition-all duration-300">
-          <div className="absolute -top-4 -right-4 p-4 opacity-[0.05] group-hover:opacity-10 group-hover:rotate-12 group-hover:scale-110 transition-all duration-500">
-            <span className="material-symbols-outlined text-9xl text-white" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
-          </div>
-          <div className="relative z-10 flex flex-col h-full justify-between">
-            <div>
-              <h4 className="text-emerald-400 text-[11px] font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span> Keandalan Model
-              </h4>
-              <p className="text-white text-5xl font-manrope font-extrabold tracking-tight">98,4%</p>
-              <p className="text-emerald-100/50 text-xs font-medium mt-3">Agregat dari analisis 42.000 node</p>
-            </div>
-            <div className="mt-8 pt-4 border-t border-emerald-800/50 flex justify-between items-center text-xs font-bold text-emerald-400">
-              <div className="flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px]">trending_up</span>
-                <span>+2,1% dari audit terakhir</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Widget 2 */}
-        <div className="bg-[#1a2d24] border border-[#233d31] p-7 rounded-3xl group shadow-lg hover:-translate-y-1 transition-all duration-300">
-          <h4 className="text-emerald-300/70 text-[11px] font-bold uppercase tracking-widest mb-5">Peringatan Kritis</h4>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3 bg-[#13231b] p-3 rounded-xl border border-rose-900/40 hover:border-rose-500/50 transition-colors">
-              <div className="w-2.5 h-2.5 rounded-full bg-rose-500 mt-1 shrink-0 ring-4 ring-rose-500/20"></div>
-              <div>
-                <p className="text-rose-50 text-xs font-bold leading-tight">Anomali terdeteksi di Geofence B-12</p>
-                <p className="text-rose-200/50 text-[10px] mt-1 font-medium">Dugaan konsentrasi hama tinggi.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 bg-[#13231b] p-3 rounded-xl border border-amber-900/30 hover:border-amber-500/50 transition-colors">
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-500 mt-1 shrink-0 ring-4 ring-amber-500/20"></div>
-              <div>
-                <p className="text-amber-50 text-xs font-bold leading-tight">Identifikasi penyimpangan data</p>
-                <p className="text-amber-200/50 text-[10px] mt-1 font-medium">Kalibrasi ulang diperlukan untuk Sensor #84.</p>
-              </div>
-            </div>
-          </div>
-          <button className="mt-5 w-full py-2.5 bg-white/5 border border-white/10 text-emerald-100 rounded-xl text-xs font-bold hover:bg-white/10 hover:text-white transition-all">Lihat Semua Peringatan</button>
-        </div>
-
-        {/* Widget 3 */}
-        <div className="bg-white p-7 rounded-3xl border border-outline-variant/20 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-          <h4 className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-5">Distribusi Diagnosis</h4>
-          <div className="space-y-5">
-            <div className="space-y-2 group/bar">
-              <div className="flex justify-between text-xs text-slate-700 font-bold">
-                <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Vegetasi Sehat</span>
-                <span>72%</span>
-              </div>
-              <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full group-hover/bar:brightness-110 transition-all" style={{ width: '72%' }}></div>
-              </div>
-            </div>
-            <div className="space-y-2 group/bar">
-              <div className="flex justify-between text-xs text-slate-700 font-bold">
-                <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-amber-400"></span> Infestasi Ringan</span>
-                <span>18%</span>
-              </div>
-              <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full group-hover/bar:brightness-110 transition-all" style={{ width: '18%' }}></div>
-              </div>
-            </div>
-            <div className="space-y-2 group/bar">
-              <div className="flex justify-between text-xs text-slate-700 font-bold">
-                <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-rose-500"></span> Wabah Parah</span>
-                <span>10%</span>
-              </div>
-              <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-rose-400 to-rose-600 rounded-full group-hover/bar:brightness-110 transition-all shadow-[0_0_10px_rgba(244,63,94,0.4)]" style={{ width: '10%' }}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
+      {/* ── Modals / Drawers / Dialogs ── */}
+      {previewImg && (
+        <ImagePreviewModal src={previewImg.src} alt={previewImg.alt} onClose={() => setPreviewImg(null)} />
+      )}
+      {detailTarget && (
+        <DetailDrawer report={detailTarget} onClose={() => setDetailTarget(null)} />
+      )}
+      {deleteTarget && (
+        <DeleteDialog report={deleteTarget} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
+      )}
     </div>
   );
 }
