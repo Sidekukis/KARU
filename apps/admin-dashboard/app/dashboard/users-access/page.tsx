@@ -2,11 +2,13 @@
 
 import React, { useState, useMemo } from 'react';
 
+import { getUsers, createUser, updateUser, deleteUser, toggleUserStatus } from '@/app/actions/user.actions';
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 type RoleType = 'admin' | 'operator' | 'pengguna';
 
 type User = {
-  id: number;
+  id: string; // Changed from number to string for Better Auth UUIDs
   name: string;
   email: string;
   phone: string;
@@ -15,105 +17,11 @@ type User = {
   joinDate: string;
   lastLogin: string;
   avatar?: string;
-  isPermanent?: boolean; // admin utama tidak bisa dihapus
+  isPermanent?: boolean;
 };
 
-// ── Mock Data ──────────────────────────────────────────────────────────────────
-const INIT_USERS: User[] = [
-  {
-    id: 1,
-    name: 'Dr. Aris Thorne',
-    email: 'aris.t@karu.eco',
-    phone: '+62 811-0001-0001',
-    role: 'admin',
-    status: 'Aktif',
-    joinDate: '01 Jan 2023',
-    lastLogin: '21 Apr 2026',
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDTRx8yeqPFVFlPBy6iNJodE-Q9ep4ixUFcr1N3gogFMifp78LHGoA_-NN_NyuqZhJoUTEZzV_UMVgfFWMsaAoXo6JeoRvduQQan6Jm3hu1voagCWjBDP1g2dsHHGbfiI4ZxKc1_In7IiP7CwiXJjbsF3T50wZMMEpYn-yWw0EidJUTB8qABYV25FiaXKbkVqKNfgV9MvK4tg_q4m3vDxdebi_fCRCcO7ULr14uHCrnlWur8IyZ_X5rCg6zNWjfQaahQ8nPk40bcbSv',
-    isPermanent: true,
-  },
-  {
-    id: 2,
-    name: 'Sari Wijayanti',
-    email: 'sari.w@karu.eco',
-    phone: '+62 811-0002-0002',
-    role: 'admin',
-    status: 'Aktif',
-    joinDate: '01 Jan 2023',
-    lastLogin: '20 Apr 2026',
-    isPermanent: true,
-  },
-  {
-    id: 3,
-    name: 'Budi Prasetyo',
-    email: 'budi.p@karu.eco',
-    phone: '+62 812-1234-5678',
-    role: 'operator',
-    status: 'Aktif',
-    joinDate: '15 Mar 2024',
-    lastLogin: '21 Apr 2026',
-  },
-  {
-    id: 4,
-    name: 'Maya Dewi',
-    email: 'maya.d@karu.eco',
-    phone: '+62 813-9876-5432',
-    role: 'operator',
-    status: 'Aktif',
-    joinDate: '20 Jun 2024',
-    lastLogin: '18 Apr 2026',
-  },
-  {
-    id: 5,
-    name: 'Rizky Firmansyah',
-    email: 'rizky.f@karu.eco',
-    phone: '+62 814-1111-2222',
-    role: 'operator',
-    status: 'Nonaktif',
-    joinDate: '10 Nov 2023',
-    lastLogin: '05 Jan 2026',
-  },
-  {
-    id: 6,
-    name: 'Ahmad Yani',
-    email: 'ahmad.y@gmail.com',
-    phone: '+62 815-3333-4444',
-    role: 'pengguna',
-    status: 'Aktif',
-    joinDate: '01 Feb 2025',
-    lastLogin: '21 Apr 2026',
-  },
-  {
-    id: 7,
-    name: 'Siti Rahayu',
-    email: 'siti.r@gmail.com',
-    phone: '+62 816-5555-6666',
-    role: 'pengguna',
-    status: 'Aktif',
-    joinDate: '14 Feb 2025',
-    lastLogin: '19 Apr 2026',
-  },
-  {
-    id: 8,
-    name: 'Joko Widodo',
-    email: 'joko.w@yahoo.com',
-    phone: '+62 817-7777-8888',
-    role: 'pengguna',
-    status: 'Aktif',
-    joinDate: '22 Mar 2025',
-    lastLogin: '17 Apr 2026',
-  },
-  {
-    id: 9,
-    name: 'Dewi Lestari',
-    email: 'dewi.les@gmail.com',
-    phone: '+62 818-9999-0000',
-    role: 'pengguna',
-    status: 'Nonaktif',
-    joinDate: '05 Apr 2025',
-    lastLogin: '10 Feb 2026',
-  },
-];
+// ── Mock Data (Bisa dihapus keseluruhan tapi kita inisiasi kosong saja) ────────
+const INIT_USERS: User[] = [];
 
 // ── Role Config ────────────────────────────────────────────────────────────────
 const ROLE_CONFIG: Record<RoleType, { label: string; badgeClass: string; icon: string; iconBg: string; desc: string }> = {
@@ -200,7 +108,7 @@ function UserDrawer({
   mode: DrawerMode;
   user: User | null;
   onClose: () => void;
-  onSave: (u: User) => void;
+  onSave: (u: User, rawPass?: string) => Promise<{ success: boolean; message?: string }>;
 }) {
   const [form, setForm] = useState<UserForm>(
     user
@@ -210,6 +118,8 @@ function UserDrawer({
   const [drawerMode, setDrawerMode] = useState<DrawerMode>(mode);
   const [showPass, setShowPass] = useState(false);
   const [errors, setErrors] = useState<Partial<UserForm>>({});
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const isEditable = drawerMode === 'add' || drawerMode === 'edit';
 
@@ -230,11 +140,13 @@ function UserDrawer({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
+    setSaving(true);
+    setSaveError(null);
     const saved: User = {
       ...(user ?? {
-        id: Date.now(),
+        id: Date.now().toString(),
         joinDate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
         lastLogin: '-',
       }),
@@ -244,8 +156,13 @@ function UserDrawer({
       role: form.role,
       status: form.status,
     };
-    onSave(saved);
-    onClose();
+    const result = await onSave(saved, form.password);
+    setSaving(false);
+    if (result?.success === false) {
+      setSaveError(result.message || 'Terjadi kesalahan.');
+    } else {
+      onClose();
+    }
   };
 
   const modeLabel = drawerMode === 'add' ? 'Tambah Pengguna Baru' : drawerMode === 'edit' ? 'Edit Pengguna' : 'Detail Pengguna';
@@ -429,7 +346,7 @@ function UserDrawer({
                       className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${form.status === s
                         ? s === 'Aktif' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-300 bg-slate-100 text-slate-600'
                         : 'border-slate-200 text-slate-400 hover:border-slate-300'
-                      }`}
+                        }`}
                     >
                       <div className={`w-2 h-2 rounded-full ${s === 'Aktif' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                       {s}
@@ -492,29 +409,42 @@ function UserDrawer({
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 p-5 border-t border-slate-100 flex gap-3">
-          {drawerMode === 'view' ? (
-            <>
-              <button type="button" onClick={onClose} className="flex-1 flex items-center justify-center gap-2 py-3 border-2 border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors">
-                <span className="material-symbols-outlined text-[18px]">close</span>Tutup
-              </button>
-              {!user?.isPermanent && (
-                <button type="button" onClick={() => setDrawerMode('edit')} className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-primary to-primary-container text-white rounded-xl text-sm font-bold shadow-md hover:brightness-105 active:scale-95 transition-all">
-                  <span className="material-symbols-outlined text-[18px]">edit</span>Edit Pengguna
-                </button>
-              )}
-            </>
-          ) : (
-            <>
-              <button type="button" onClick={drawerMode === 'edit' ? () => setDrawerMode('view') : onClose} className="flex-1 flex items-center justify-center gap-2 py-3 border-2 border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors">
-                <span className="material-symbols-outlined text-[18px]">undo</span>Batal
-              </button>
-              <button type="button" onClick={handleSave} className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-primary to-primary-container text-white rounded-xl text-sm font-bold shadow-md hover:brightness-105 active:scale-95 transition-all">
-                <span className="material-symbols-outlined text-[18px]">save</span>
-                {drawerMode === 'add' ? 'Buat Akun' : 'Simpan Perubahan'}
-              </button>
-            </>
+        <div className="flex-shrink-0 border-t border-slate-100">
+          {saveError && (
+            <div className="px-5 pt-4 pb-0">
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                <span className="material-symbols-outlined text-red-500 text-[18px] flex-shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>error</span>
+                <p className="text-xs text-red-700 font-semibold">{saveError}</p>
+              </div>
+            </div>
           )}
+          <div className="p-5 flex gap-3">
+            {drawerMode === 'view' ? (
+              <>
+                <button type="button" onClick={onClose} className="flex-1 flex items-center justify-center gap-2 py-3 border-2 border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors">
+                  <span className="material-symbols-outlined text-[18px]">close</span>Tutup
+                </button>
+                {!user?.isPermanent && (
+                  <button type="button" onClick={() => setDrawerMode('edit')} className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-primary to-primary-container text-white rounded-xl text-sm font-bold shadow-md hover:brightness-105 active:scale-95 transition-all">
+                    <span className="material-symbols-outlined text-[18px]">edit</span>Edit Pengguna
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <button type="button" disabled={saving} onClick={drawerMode === 'edit' ? () => setDrawerMode('view') : onClose} className="flex-1 flex items-center justify-center gap-2 py-3 border-2 border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors disabled:opacity-50">
+                  <span className="material-symbols-outlined text-[18px]">undo</span>Batal
+                </button>
+                <button type="button" disabled={saving} onClick={handleSave} className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-primary to-primary-container text-white rounded-xl text-sm font-bold shadow-md hover:brightness-105 active:scale-95 transition-all disabled:opacity-70 disabled:cursor-not-allowed">
+                  {saving ? (
+                    <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>Menyimpan...</>
+                  ) : (
+                    <><span className="material-symbols-outlined text-[18px]">save</span>{drawerMode === 'add' ? 'Buat Akun' : 'Simpan Perubahan'}</>
+                  )}
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
       <style>{`@keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
@@ -601,7 +531,31 @@ function ToggleStatusDialog({ user, onConfirm, onCancel }: { user: User; onConfi
 // ── Halaman Utama ──────────────────────────────────────────────────────────────
 export default function UsersAccessPage() {
   const [users, setUsers] = useState<User[]>(INIT_USERS);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+
+  React.useEffect(() => {
+    async function fetchUsers() {
+      const res = await getUsers();
+      if (res.success && res.data) {
+        // Map data db ke tipe User frontend
+        const mapped: User[] = res.data.map((u: any) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          phone: u.phone || '-',
+          role: u.role as RoleType,
+          status: u.status as 'Aktif' | 'Nonaktif',
+          joinDate: new Date(u.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+          lastLogin: u.updatedAt ? new Date(u.updatedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
+          isPermanent: u.role === 'admin'
+        }));
+        setUsers(mapped);
+      }
+      setLoading(false);
+    }
+    fetchUsers();
+  }, []);
   const [filterRole, setFilterRole] = useState<'semua' | RoleType>('semua');
   const [filterStatus, setFilterStatus] = useState<'semua' | 'Aktif' | 'Nonaktif'>('semua');
   const [drawerState, setDrawerState] = useState<{ open: boolean; mode: DrawerMode; user: User | null }>({ open: false, mode: 'add', user: null });
@@ -629,31 +583,56 @@ export default function UsersAccessPage() {
   const openDrawer = (mode: DrawerMode, user: User | null = null) =>
     setDrawerState({ open: true, mode, user });
 
-  const handleSave = (saved: User) => {
-    setUsers((prev) => {
-      const idx = prev.findIndex((u) => u.id === saved.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = saved;
-        return next;
+  const handleSave = async (saved: User, rawPassword?: string): Promise<{ success: boolean; message?: string }> => {
+    if (drawerState.mode === 'add') {
+      const payload = { ...saved, password: rawPassword };
+      const res = await createUser(payload);
+      if (res.success) {
+        // Re-fetch setelah berhasil
+        const usersRes = await getUsers();
+        if (usersRes.success && usersRes.data) {
+          const mapped: User[] = usersRes.data.map((u: any) => ({
+            id: u.id, name: u.name, email: u.email, phone: u.phone || '-',
+            role: u.role as RoleType, status: u.status as 'Aktif' | 'Nonaktif',
+            joinDate: new Date(u.createdAt).toLocaleDateString('id-ID'),
+            lastLogin: u.updatedAt ? new Date(u.updatedAt).toLocaleDateString('id-ID') : '-',
+            isPermanent: u.role === 'admin'
+          }));
+          setUsers(mapped);
+        }
       }
-      return [saved, ...prev];
-    });
+      return res;
+    } else {
+      const res = await updateUser(saved.id, saved);
+      if (res.success) {
+        setUsers(prev => prev.map(u => u.id === saved.id ? saved : u));
+      }
+      return res;
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
-    setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+    const res = await deleteUser(deleteTarget.id);
+    if (res.success) {
+      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+    } else {
+      alert(res.message);
+    }
     setDeleteTarget(null);
   };
 
-  const handleToggleStatus = () => {
+  const handleToggleStatus = async () => {
     if (!toggleTarget) return;
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === toggleTarget.id ? { ...u, status: u.status === 'Aktif' ? 'Nonaktif' : 'Aktif' } : u
-      )
-    );
+    const newStatus = toggleTarget.status === 'Aktif' ? 'Nonaktif' : 'Aktif';
+    const res = await toggleUserStatus(toggleTarget.id, newStatus);
+    if (res.success) {
+      setUsers((prev) =>
+        prev.map((u) => u.id === toggleTarget.id ? { ...u, status: newStatus } : u)
+      );
+    } else {
+      alert(res.message);
+    }
     setToggleTarget(null);
   };
 
@@ -696,29 +675,6 @@ export default function UsersAccessPage() {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Role legend */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Panduan Peran</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {(Object.entries(ROLE_CONFIG) as [RoleType, typeof ROLE_CONFIG[RoleType]][]).map(([roleKey, cfg]) => (
-            <div key={roleKey} className={`flex items-start gap-3 p-4 rounded-xl border ${roleKey === 'admin' ? 'bg-violet-50 border-violet-100' : roleKey === 'operator' ? 'bg-sky-50 border-sky-100' : 'bg-emerald-50 border-emerald-100'}`}>
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${cfg.iconBg}`}>
-                <span className={`material-symbols-outlined text-[20px]`} style={{ fontVariationSettings: "'FILL' 1" }}>{cfg.icon}</span>
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                  <p className="text-sm font-bold text-slate-700">{cfg.label}</p>
-                  {roleKey === 'admin' && (
-                    <span className="text-[9px] font-bold bg-violet-200 text-violet-700 px-1.5 py-0.5 rounded-md uppercase">Permanen</span>
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-500 leading-relaxed">{cfg.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Filter bar */}
@@ -922,6 +878,29 @@ export default function UsersAccessPage() {
               <span className="text-[11px] text-slate-500 font-medium">Pengguna: {totalPengguna}</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Role legend */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Panduan Peran</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {(Object.entries(ROLE_CONFIG) as [RoleType, typeof ROLE_CONFIG[RoleType]][]).map(([roleKey, cfg]) => (
+            <div key={roleKey} className={`flex items-start gap-3 p-4 rounded-xl border ${roleKey === 'admin' ? 'bg-violet-50 border-violet-100' : roleKey === 'operator' ? 'bg-sky-50 border-sky-100' : 'bg-emerald-50 border-emerald-100'}`}>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${cfg.iconBg}`}>
+                <span className={`material-symbols-outlined text-[20px]`} style={{ fontVariationSettings: "'FILL' 1" }}>{cfg.icon}</span>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                  <p className="text-sm font-bold text-slate-700">{cfg.label}</p>
+                  {roleKey === 'admin' && (
+                    <span className="text-[9px] font-bold bg-violet-200 text-violet-700 px-1.5 py-0.5 rounded-md uppercase">Permanen</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed">{cfg.desc}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

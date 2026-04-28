@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSession, signOut } from '@/lib/auth-client';
 
 // ─────────────────────────────────────────────
 // Inner component: uses usePathname safely
@@ -10,6 +11,18 @@ import { usePathname } from 'next/navigation';
 // ─────────────────────────────────────────────
 function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? '';
+  const { data: session } = useSession();
+
+  const currentUser = session?.user;
+  const userName = currentUser?.name ?? 'Pengguna';
+  const userEmail = currentUser?.email ?? '';
+  const userImage = currentUser?.image ?? null;
+  const userRole = (currentUser as any)?.role ?? 'pengguna';
+  const roleLabels: Record<string, string> = { admin: 'Admin Utama', operator: 'Operator', pengguna: 'Pengguna' };
+  const roleLabel = roleLabels[userRole] ?? 'Pengguna';
+
+  // Avatar initials
+  const initials = userName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
 
   const [isDataMasterOpen, setIsDataMasterOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -195,7 +208,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             <span className="text-sm font-medium">Log Aktivitas</span>
           </Link>
 
-          <Link href="#" className="flex items-center gap-3 px-4 py-3 text-emerald-100/60 hover:text-emerald-50 hover:bg-emerald-900/20 transition-all duration-200">
+          <Link href="/dashboard/profile" className={navLinkClass(isActive('/dashboard/profile'))}>
             <span className="material-symbols-outlined">settings</span>
             <span className="text-sm font-medium">Pengaturan</span>
           </Link>
@@ -257,24 +270,39 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 className="flex items-center gap-3 pl-2 rounded-lg hover:bg-slate-100 transition-colors p-1"
               >
                 <div className="text-right hidden sm:block">
-                  <p className="text-[13px] font-extrabold text-emerald-800">Dr. Aris Thorne</p>
-                  <p className="text-[11px] text-slate-500 font-bold tracking-tight">Kepala Ekologi</p>
+                  <p className="text-[13px] font-extrabold text-emerald-800">{userName}</p>
+                  <p className="text-[11px] text-slate-500 font-bold tracking-tight">{roleLabel}</p>
                 </div>
-                <img
-                  alt="Foto Profil"
-                  className="w-9 h-9 rounded-full object-cover shadow-sm ring-2 ring-emerald-500/20"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTRx8yeqPFVFlPBy6iNJodE-Q9ep4ixUFcr1N3gogFMifp78LHGoA_-NN_NyuqZhJoUTEZzV_UMVgfFWMsaAoXo6JeoRvduQQan6Jm3hu1voagCWjBDP1g2dsHHGbfiI4ZxKc1_In7IiP7CwiXJjbsF3T50wZMMEpYn-yWw0EidJUTB8qABYV25FiaXKbkVqKNfgV9MvK4tg_q4m3vDxdebi_fCRCcO7ULr14uHCrnlWur8IyZ_X5rCg6zNWjfQaahQ8nPk40bcbSv"
-                />
+                {userImage ? (
+                  <img
+                    alt="Foto Profil"
+                    className="w-9 h-9 rounded-full object-cover shadow-sm ring-2 ring-emerald-500/20"
+                    src={userImage}
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-700 flex items-center justify-center text-white text-[13px] font-bold shadow-sm ring-2 ring-emerald-500/20">
+                    {initials}
+                  </div>
+                )}
               </button>
 
               {/* Profile Dropdown */}
               {isProfileMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsProfileMenuOpen(false)} />
-                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200/60 z-50 overflow-hidden">
-                    <div className="p-4 border-b border-slate-100 bg-slate-50">
-                      <p className="text-[13px] font-bold text-emerald-800">Dr. Aris Thorne</p>
-                      <p className="text-[10px] text-slate-500 font-mono mt-0.5">aris.t@karu.eco</p>
+                  <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-xl shadow-xl border border-slate-200/60 z-50 overflow-hidden">
+                    <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center gap-3">
+                      {userImage ? (
+                        <img src={userImage} alt={userName} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                          {initials}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-bold text-emerald-800 truncate">{userName}</p>
+                        <p className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">{userEmail}</p>
+                      </div>
                     </div>
                     <div className="p-2">
                       <Link
@@ -282,18 +310,19 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                         onClick={() => setIsProfileMenuOpen(false)}
                         className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
                       >
-                        <span className="material-symbols-outlined text-[18px]">person</span>
-                        Edit Profil
+                        <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
+                        Profil & Pengaturan
                       </Link>
                     </div>
                     <div className="p-2 border-t border-slate-100">
-                      <Link
-                        href="/"
-                        className="flex items-center justify-between px-3 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                      <button
+                        type="button"
+                        onClick={async () => { await signOut(); window.location.href = '/'; }}
+                        className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                       >
                         Keluar Aplikasi
                         <span className="material-symbols-outlined text-[18px]">logout</span>
-                      </Link>
+                      </button>
                     </div>
                   </div>
                 </>

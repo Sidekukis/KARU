@@ -12,7 +12,9 @@ export const user = pgTable("user", {
 	image: text("image"),
 	createdAt: timestamp("createdAt").notNull(),
 	updatedAt: timestamp("updatedAt").notNull(),
-  role: text('role').default('pengguna')
+  role: text('role').default('pengguna'),
+  phone: text('phone'),
+  status: varchar('status', { length: 50 }).default('Aktif'),
 });
 
 export const session = pgTable("session", {
