@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { saveSopAction, deleteSopAction, getSopsAction } from '@/app/actions/master-data.actions';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type KategoriSOP = 'Pengendalian Hama' | 'Pengendalian Penyakit' | 'Darurat & Mitigasi' | 'Teknis & Perawatan' | 'Preventif';
@@ -12,8 +13,8 @@ type SOP = {
   judul: string;
   kategori: KategoriSOP;
   urgensi: UrgensiBadge;
-  penyakitHamaTerkait: string[];   // nama dari Kamus Penyakit & Hama
-  tanamanTarget: string[];          // tanaman yang terdampak
+  penyakitHamaTerkait: { id: string; nama: string }[];
+  tanamanTarget: { id: string; nama: string }[];
   langkah: string[];                // numbered steps
   pdfUrl: string | null;            // link PDF jika ada
   dibuat: string;
@@ -22,151 +23,19 @@ type SOP = {
 };
 
 // ── Mock Data ──────────────────────────────────────────────────────────────────
-const INIT_SOP: SOP[] = [
-  {
-    id: 'SOP-001',
-    judul: 'Penanganan Blas pada Tanaman Padi',
-    kategori: 'Pengendalian Penyakit',
-    urgensi: 'Segera',
-    penyakitHamaTerkait: ['Blas'],
-    tanamanTarget: ['Padi'],
-    langkah: [
-      'Lakukan inspeksi visual pada daun dan malai padi setiap pagi untuk mendeteksi bercak berbentuk belah ketupat.',
-      'Isolasi rumpun yang terinfeksi dengan memasang pembatas fisik agar spora tidak menyebar melalui air irigasi.',
-      'Hentikan pemupukan nitrogen berlebih di area yang terinfeksi—tinggi N mempercepat penyebaran jamur.',
-      'Semprotkan fungisida berbahan aktif trisiklazol (konsentrasi 0.1%) pada sore hari saat angin tenang.',
-      'Ulangi penyemprotan setiap 7 hari selama minimal 3 siklus atau hingga gejala hilang.',
-      'Dokumentasikan luas area terinfeksi dan laporkan ke sistem KARU melalui menu Laporan.',
-    ],
-    pdfUrl: null,
-    dibuat: '10 Jan 2025',
-    diupdate: '15 Jan 2025',
-    dibuatOleh: 'Dr. Aris Thorne',
-  },
-  {
-    id: 'SOP-002',
-    judul: 'Pengendalian Wereng Cokelat secara Terpadu',
-    kategori: 'Pengendalian Hama',
-    urgensi: 'Segera',
-    penyakitHamaTerkait: ['Wereng Cokelat'],
-    tanamanTarget: ['Padi'],
-    langkah: [
-      'Pantau populasi wereng di pangkal batang setiap 3 hari menggunakan metode petik rumpun (5 titik per petak).',
-      'Pertahankan populasi musuh alami: jangan semprot insektisida jika populasi wereng < 10 ekor/rumpun.',
-      'Jika populasi mencapai ambang ekonomi (>15 ekor/rumpun), aplikasikan insektisida imidakloprid secara spot treatment.',
-      'Keringkan lahan selama 3–4 hari untuk memutus siklus hidup nimfa wereng.',
-      'Tanam varietas tahan wereng (Inpari 13, Inpari 30) untuk pertanaman berikutnya.',
-      'Catat titik koordinat serangan di sistem KARU untuk pemetaan distribusi hama.',
-    ],
-    pdfUrl: 'https://example.com/sop-wereng.pdf',
-    dibuat: '12 Jan 2025',
-    diupdate: '18 Jan 2025',
-    dibuatOleh: 'Sari W.',
-  },
-  {
-    id: 'SOP-003',
-    judul: 'Penanganan Layu Fusarium pada Tomat dan Cabai',
-    kategori: 'Pengendalian Penyakit',
-    urgensi: 'Segera',
-    penyakitHamaTerkait: ['Layu Fusarium'],
-    tanamanTarget: ['Tomat', 'Cabai Merah'],
-    langkah: [
-      'Identifikasi tanaman terinfeksi: layu asimetris pada daun bawah dan pembuluh batang berwarna cokelat saat dibelah.',
-      'Cabut dan musnahkan tanaman terinfeksi di luar kebun (bakar atau kubur dalam), jangan dikompos.',
-      'Sterilisasi tanah di area bekas tanaman sakit menggunakan drenching fungisida berbahan benomil.',
-      'Aplikasikan agen hayati Trichoderma harzianum pada lubang tanam untuk pertanaman baru.',
-      'Hindari bekas luka pada akar saat pengolahan tanah—gunakan cangkul halus dengan hati-hati.',
-      'Rotasikan tanaman dengan non-inang (jagung, singkong) selama minimal 1 musim.',
-      'Monitor tanaman baru setiap 2 minggu selama 2 bulan pertama pertumbuhan.',
-    ],
-    pdfUrl: null,
-    dibuat: '20 Jan 2025',
-    diupdate: '25 Jan 2025',
-    dibuatOleh: 'Budi P.',
-  },
-  {
-    id: 'SOP-004',
-    judul: 'Pengendalian Thrips pada Tanaman Hortikultura',
-    kategori: 'Pengendalian Hama',
-    urgensi: 'Rutin',
-    penyakitHamaTerkait: ['Thrips'],
-    tanamanTarget: ['Cabai Merah', 'Bawang Merah', 'Tomat'],
-    langkah: [
-      'Pasang perangkap lengket biru 40×25 cm pada tiap 20 m² kebun untuk monitoring populasi setiap minggu.',
-      'Jika > 10 thrips/perangkap/minggu: mulai tindakan pengendalian.',
-      'Semprotkan insektisida spinosad (0.5 ml/liter) pada pagi hari jam 06.00–08.00 untuk efektivitas optimal.',
-      'Tunggu 3 hari, evaluasi perangkap. Jika populasi masih tinggi, ganti ke abamektin (rotasi bahan aktif).',
-      'Jaga kelembapan kebun optimal (60–70%) karena thrips berkembang pesat di kondisi kering.',
-      'Bersihkan gulma di sekitar kebun yang menjadi tempat perlindungan thrips.',
-    ],
-    pdfUrl: null,
-    dibuat: '22 Jan 2025',
-    diupdate: '28 Jan 2025',
-    dibuatOleh: 'Maya D.',
-  },
-  {
-    id: 'SOP-005',
-    judul: 'Penanganan Darurat Serangan Ulat Grayak Masif',
-    kategori: 'Darurat & Mitigasi',
-    urgensi: 'Segera',
-    penyakitHamaTerkait: ['Ulat Grayak'],
-    tanamanTarget: ['Jagung Manis', 'Padi'],
-    langkah: [
-      'Aktivasi status darurat jika > 30% tanaman di satu blok menunjukkan kerusakan akibat ulat grayak.',
-      'Laporkan koordinat blok terserang ke supervisor dan catat di sistem KARU sebagai insiden darurat.',
-      'Aplikasikan Bt (Bacillus thuringiensis) var. kurstaki segera—aman untuk musuh alami dan manusia.',
-      'Untuk serangan sangat berat: gunakan emamektin benzoat 1EC (0.5 ml/liter) sebagai last resort.',
-      'Pasang perangkap feromon Spodoptera untuk memantau migrasi populasi dari lahan sekitar.',
-      'Lakukan sanitasi sisa tanaman setelah panen untuk memutus siklus telur di dalam tanah.',
-      'Buat laporan pasca-kejadian dalam 48 jam dan unggah ke sistem KARU.',
-    ],
-    pdfUrl: 'https://example.com/sop-darurat-ulat.pdf',
-    dibuat: '1 Feb 2025',
-    diupdate: '1 Feb 2025',
-    dibuatOleh: 'Rai S.',
-  },
-  {
-    id: 'SOP-006',
-    judul: 'Pencegahan Antraknosa pada Cabai Musim Hujan',
-    kategori: 'Preventif',
-    urgensi: 'Preventif',
-    penyakitHamaTerkait: ['Antraknosa'],
-    tanamanTarget: ['Cabai Merah'],
-    langkah: [
-      'Mulai jadwal penyemprotan fungisida preventif mankozeb (2 g/liter) sejak awal musim hujan, setiap 5 hari.',
-      'Pastikan drainase kebun lancar—genangan air di sekitar tanaman mempercepat penyebaran spora.',
-      'Panen buah secara rutin sebelum terlalu matang karena buah tua lebih rentan infeksi.',
-      'Buang dan musnahkan buah yang sudah menunjukkan bercak antraknosa dari kebun.',
-      'Gunakan mulsa plastik hitam-perak untuk mencegah percikan air tanah yang membawa spora.',
-      'Rotasikan fungisida setiap 3 siklus: mankozeb → klorotalonil → azoksistrobin.',
-    ],
-    pdfUrl: null,
-    dibuat: '5 Feb 2025',
-    diupdate: '10 Feb 2025',
-    dibuatOleh: 'Yoga P.',
-  },
-];
+const INIT_SOP: SOP[] = [];
 
 // ── Pilihan data ───────────────────────────────────────────────────────────────
 const KATEGORI_OPTS: KategoriSOP[] = ['Pengendalian Hama', 'Pengendalian Penyakit', 'Darurat & Mitigasi', 'Teknis & Perawatan', 'Preventif'];
 const URGENSI_OPTS: UrgensiBadge[] = ['Segera', 'Rutin', 'Preventif'];
 
-// Penyakit & Hama dari kamus (referensi)
-const PENYAKIT_HAMA_LIST = [
-  'Blas', 'Wereng Cokelat', 'Layu Fusarium', 'Antraknosa', 'Thrips',
-  'Ulat Grayak', 'Virus Kuning Tomat', 'Ganoderma', 'Bercak Ungu Bawang', 'Kumbang Tanduk Kelapa Sawit',
-];
 
-const TANAMAN_LIST = [
-  'Padi', 'Jagung Manis', 'Tomat', 'Cabai Merah', 'Singkong',
-  'Pisang Kepok', 'Kelapa Sawit', 'Kangkung', 'Bawang Merah', 'Karet',
-];
 
 // ── Badge helpers ──────────────────────────────────────────────────────────────
 function UrgensiBadgeComp({ u }: { u: UrgensiBadge }) {
   const map: Record<UrgensiBadge, string> = {
-    'Segera':    'bg-red-100 text-red-700 border border-red-200',
-    'Rutin':     'bg-emerald-100 text-emerald-700 border border-emerald-200',
+    'Segera': 'bg-red-100 text-red-700 border border-red-200',
+    'Rutin': 'bg-emerald-100 text-emerald-700 border border-emerald-200',
     'Preventif': 'bg-blue-100 text-blue-700 border border-blue-200',
   };
   const icon: Record<UrgensiBadge, string> = {
@@ -182,11 +51,11 @@ function UrgensiBadgeComp({ u }: { u: UrgensiBadge }) {
 
 function KategoriBadge({ k }: { k: KategoriSOP }) {
   const map: Record<KategoriSOP, string> = {
-    'Pengendalian Hama':     'bg-red-50 text-red-700',
+    'Pengendalian Hama': 'bg-red-50 text-red-700',
     'Pengendalian Penyakit': 'bg-amber-50 text-amber-800',
-    'Darurat & Mitigasi':    'bg-rose-50 text-rose-800',
-    'Teknis & Perawatan':    'bg-blue-50 text-blue-700',
-    'Preventif':             'bg-violet-50 text-violet-700',
+    'Darurat & Mitigasi': 'bg-rose-50 text-rose-800',
+    'Teknis & Perawatan': 'bg-blue-50 text-blue-700',
+    'Preventif': 'bg-violet-50 text-violet-700',
   };
   return (
     <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${map[k]}`}>{k}</span>
@@ -209,10 +78,10 @@ function SOPCard({ sop, onDetail, onEdit, onDelete }: { sop: SOP; onDetail: () =
       {/* Penyakit/Hama terkait */}
       <div className="flex flex-wrap gap-1.5 mb-3">
         {sop.penyakitHamaTerkait.map(p => (
-          <span key={p} className="text-[10px] font-bold bg-amber-50 border border-amber-100 text-amber-800 px-2 py-0.5 rounded-md">{p}</span>
+          <span key={p.id} className="text-[10px] font-bold bg-amber-50 border border-amber-100 text-amber-800 px-2 py-0.5 rounded-md">{p.nama}</span>
         ))}
         {sop.tanamanTarget.map(t => (
-          <span key={t} className="text-[10px] font-bold bg-emerald-50 border border-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">{t}</span>
+          <span key={t.id} className="text-[10px] font-bold bg-emerald-50 border border-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">{t.nama}</span>
         ))}
       </div>
 
@@ -279,7 +148,7 @@ const EMPTY_FORM: Omit<SOP, 'id' | 'dibuat' | 'diupdate' | 'dibuatOleh'> = {
   penyakitHamaTerkait: [], tanamanTarget: [], langkah: [''], pdfUrl: null,
 };
 
-function SOPDrawer({ mode, sop, onClose, onSave }: { mode: DrawerMode; sop: SOP | null; onClose: () => void; onSave: (s: SOP) => void }) {
+function SOPDrawer({ mode, sop, availablePlants, availablePests, onClose, onSave }: { mode: DrawerMode; sop: SOP | null; availablePlants: any[]; availablePests: any[]; onClose: () => void; onSave: (s: SOP) => void }) {
   const [form, setForm] = useState<Omit<SOP, 'id' | 'dibuat' | 'diupdate' | 'dibuatOleh'>>(
     sop ? { judul: sop.judul, kategori: sop.kategori, urgensi: sop.urgensi, penyakitHamaTerkait: sop.penyakitHamaTerkait, tanamanTarget: sop.tanamanTarget, langkah: sop.langkah, pdfUrl: sop.pdfUrl } : { ...EMPTY_FORM, langkah: [''] }
   );
@@ -289,11 +158,20 @@ function SOPDrawer({ mode, sop, onClose, onSave }: { mode: DrawerMode; sop: SOP 
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const toggleMulti = (field: 'penyakitHamaTerkait' | 'tanamanTarget', val: string) => {
-    setForm(prev => ({
-      ...prev,
-      [field]: prev[field].includes(val) ? prev[field].filter(v => v !== val) : [...prev[field], val],
-    }));
+  const toggleMultiPest = (valId: string, valNama: string) => {
+    setForm(prev => {
+      const exists = prev.penyakitHamaTerkait.find(p => p.id === valId);
+      if (exists) return { ...prev, penyakitHamaTerkait: prev.penyakitHamaTerkait.filter(p => p.id !== valId) };
+      return { ...prev, penyakitHamaTerkait: [...prev.penyakitHamaTerkait, { id: valId, nama: valNama }] };
+    });
+  };
+
+  const toggleMultiPlant = (valId: string, valNama: string) => {
+    setForm(prev => {
+      const exists = prev.tanamanTarget.find(t => t.id === valId);
+      if (exists) return { ...prev, tanamanTarget: prev.tanamanTarget.filter(t => t.id !== valId) };
+      return { ...prev, tanamanTarget: [...prev.tanamanTarget, { id: valId, nama: valNama }] };
+    });
   };
 
   const updateLangkah = (idx: number, val: string) => {
@@ -304,13 +182,12 @@ function SOPDrawer({ mode, sop, onClose, onSave }: { mode: DrawerMode; sop: SOP 
 
   const handleSave = () => {
     const saved: SOP = {
-      ...(sop ?? { id: `SOP-${Date.now()}`, dibuat: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }), dibuatOleh: 'Admin' }),
+      ...(sop ?? { id: '', dibuat: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }), dibuatOleh: 'Admin' }),
       ...form,
       diupdate: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
       langkah: form.langkah.filter(l => l.trim()),
     };
     onSave(saved);
-    onClose();
   };
 
   const isEditable = drawerMode === 'add' || drawerMode === 'edit';
@@ -362,11 +239,11 @@ function SOPDrawer({ mode, sop, onClose, onSave }: { mode: DrawerMode; sop: SOP 
               <div className="space-y-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Penyakit / Hama Terkait</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {sop.penyakitHamaTerkait.map(p => <span key={p} className="text-xs font-bold bg-amber-50 border border-amber-100 text-amber-800 px-2.5 py-1 rounded-lg">{p}</span>)}
+                  {sop.penyakitHamaTerkait.map(p => <span key={p.id} className="text-xs font-bold bg-amber-50 border border-amber-100 text-amber-800 px-2.5 py-1 rounded-lg">{p.nama}</span>)}
                 </div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-2">Tanaman Target</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {sop.tanamanTarget.map(t => <span key={t} className="text-xs font-bold bg-emerald-50 border border-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg">{t}</span>)}
+                  {sop.tanamanTarget.map(t => <span key={t.id} className="text-xs font-bold bg-emerald-50 border border-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg">{t.nama}</span>)}
                 </div>
               </div>
 
@@ -461,12 +338,15 @@ function SOPDrawer({ mode, sop, onClose, onSave }: { mode: DrawerMode; sop: SOP 
                   Penyakit / Hama Terkait *
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {PENYAKIT_HAMA_LIST.map(p => (
-                    <button key={p} type="button" onClick={() => toggleMulti('penyakitHamaTerkait', p)}
-                      className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all ${form.penyakitHamaTerkait.includes(p) ? 'bg-amber-500 border-amber-500 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300'}`}>
-                      {p}
-                    </button>
-                  ))}
+                  {availablePests.map(p => {
+                    const isSelected = form.penyakitHamaTerkait.some(ph => ph.id === p.id);
+                    return (
+                      <button key={p.id} type="button" onClick={() => toggleMultiPest(p.id, p.nama)}
+                        className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all ${isSelected ? 'bg-amber-500 border-amber-500 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300'}`}>
+                        {p.nama}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -477,12 +357,15 @@ function SOPDrawer({ mode, sop, onClose, onSave }: { mode: DrawerMode; sop: SOP 
                   Tanaman Target *
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {TANAMAN_LIST.map(t => (
-                    <button key={t} type="button" onClick={() => toggleMulti('tanamanTarget', t)}
-                      className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all ${form.tanamanTarget.includes(t) ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-300'}`}>
-                      {t}
-                    </button>
-                  ))}
+                  {availablePlants.map(t => {
+                    const isSelected = form.tanamanTarget.some(tt => tt.id === t.id);
+                    return (
+                      <button key={t.id} type="button" onClick={() => toggleMultiPlant(t.id, t.namaLokal)}
+                        className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all ${isSelected ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-300'}`}>
+                        {t.namaLokal}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -586,34 +469,90 @@ function DeleteDialog({ sop, onConfirm, onCancel }: { sop: SOP; onConfirm: () =>
 
 // ── Halaman Utama ──────────────────────────────────────────────────────────────
 export default function SopPenangananPage() {
-  const [data, setData] = useState<SOP[]>(INIT_SOP);
+  const [data, setData] = useState<SOP[]>([]);
+  const [availablePlants, setAvailablePlants] = useState<any[]>([]);
+  const [availablePests, setAvailablePests] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterKategori, setFilterKategori] = useState('semua');
   const [filterUrgensi, setFilterUrgensi] = useState('semua');
   const [drawerState, setDrawerState] = useState<{ open: boolean; mode: DrawerMode; sop: SOP | null }>({ open: false, mode: 'view', sop: null });
   const [deleteTarget, setDeleteTarget] = useState<SOP | null>(null);
 
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const { getPlantsAction, getPestsAction } = await import('@/app/actions/master-data.actions');
+      const plantsRes = await getPlantsAction();
+      const pestsRes = await getPestsAction();
+      setAvailablePlants(plantsRes);
+      setAvailablePests(pestsRes);
+
+      const result = await getSopsAction();
+      const mapped = result.map((r: any) => ({
+        id: r.id,
+        judul: r.judul,
+        kategori: r.kategori || 'Pengendalian Penyakit',
+        urgensi: r.urgensi || 'Rutin',
+        penyakitHamaTerkait: r.penyakitHamaTerkait || [],
+        tanamanTarget: r.tanamanTarget || [],
+        langkah: r.langkah || [],
+        pdfUrl: r.pdfUrl || null,
+        dibuat: r.createdAt ? new Date(r.createdAt).toLocaleDateString('id-ID') : '',
+        diupdate: r.updatedAt ? new Date(r.updatedAt).toLocaleDateString('id-ID') : '',
+        dibuatOleh: r.createdBy || 'Admin',
+      }));
+      setData(mapped as SOP[]);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   const filtered = data.filter(s => {
     const matchSearch = s.judul.toLowerCase().includes(search.toLowerCase()) ||
-      s.penyakitHamaTerkait.some(p => p.toLowerCase().includes(search.toLowerCase())) ||
-      s.tanamanTarget.some(t => t.toLowerCase().includes(search.toLowerCase()));
+      s.penyakitHamaTerkait.some(p => p.nama.toLowerCase().includes(search.toLowerCase())) ||
+      s.tanamanTarget.some(t => t.nama.toLowerCase().includes(search.toLowerCase()));
     const matchKat = filterKategori === 'semua' || s.kategori === filterKategori;
     const matchUrg = filterUrgensi === 'semua' || s.urgensi === filterUrgensi;
     return matchSearch && matchKat && matchUrg;
   });
 
-  const handleSave = (saved: SOP) => {
-    setData(prev => {
-      const idx = prev.findIndex(s => s.id === saved.id);
-      if (idx >= 0) { const next = [...prev]; next[idx] = saved; return next; }
-      return [saved, ...prev];
-    });
+  const handleSave = async (saved: SOP) => {
+    const formData = new FormData();
+    if (saved.id && saved.id !== '') formData.append('id', saved.id);
+    formData.append('judul', saved.judul);
+    formData.append('kategori', saved.kategori);
+    formData.append('urgensi', saved.urgensi);
+    formData.append('langkah', JSON.stringify(saved.langkah));
+    if (saved.pdfUrl) formData.append('pdfUrl', saved.pdfUrl);
+
+    formData.append('plantIds', JSON.stringify(saved.tanamanTarget.map(t => t.id)));
+    formData.append('pestIds', JSON.stringify(saved.penyakitHamaTerkait.map(p => p.id)));
+
+    const res = await saveSopAction(formData);
+    if (res.success) {
+      fetchData();
+      setDrawerState(s => ({ ...s, open: false }));
+    } else {
+      alert('Gagal menyimpan SOP: ' + res.error);
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
-    setData(prev => prev.filter(s => s.id !== deleteTarget.id));
-    setDeleteTarget(null);
+    const res = await deleteSopAction(deleteTarget.id);
+    if (res.success) {
+      fetchData();
+      setDeleteTarget(null);
+    } else {
+      alert('Gagal menghapus SOP: ' + res.error);
+    }
   };
 
   const openDrawer = (mode: DrawerMode, sop: SOP | null = null) =>
@@ -720,6 +659,7 @@ export default function SopPenangananPage() {
       {/* Drawer */}
       {drawerState.open && (
         <SOPDrawer mode={drawerState.mode} sop={drawerState.sop}
+          availablePlants={availablePlants} availablePests={availablePests}
           onClose={() => setDrawerState(s => ({ ...s, open: false }))}
           onSave={handleSave} />
       )}

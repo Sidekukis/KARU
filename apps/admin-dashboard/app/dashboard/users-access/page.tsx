@@ -453,12 +453,12 @@ function UserDrawer({
 }
 
 // ── Delete Dialog ──────────────────────────────────────────────────────────────
-function DeleteDialog({ user, onConfirm, onCancel }: { user: User; onConfirm: () => void; onCancel: () => void }) {
+function DeleteDialog({ user, onConfirm, onCancel, loading }: { user: User; onConfirm: () => void; onCancel: () => void; loading?: boolean }) {
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-[3px] z-50" onClick={onCancel} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm" style={{ animation: 'scaleIn 0.18s ease-out' }}>
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-[3px] z-[60]" onClick={loading ? undefined : onCancel} />
+      <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
+        <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm pointer-events-auto" style={{ animation: 'scaleIn 0.18s ease-out' }}>
           <div className="flex items-center gap-4 mb-4">
             <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center flex-shrink-0">
               <span className="material-symbols-outlined text-red-600 text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>person_remove</span>
@@ -476,8 +476,19 @@ function DeleteDialog({ user, onConfirm, onCancel }: { user: User; onConfirm: ()
             </div>
           </div>
           <div className="flex gap-3">
-            <button type="button" onClick={onCancel} className="flex-1 py-2.5 border-2 border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors">Batal</button>
-            <button type="button" onClick={onConfirm} className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors shadow-md">Ya, Hapus</button>
+            <button type="button" disabled={loading} onClick={onCancel} className="flex-1 py-2.5 border-2 border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors disabled:opacity-50">Batal</button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={onConfirm}
+              className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors shadow-md disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>Menghapus...</>
+              ) : (
+                'Ya, Hapus'
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -532,6 +543,7 @@ function ToggleStatusDialog({ user, onConfirm, onCancel }: { user: User; onConfi
 export default function UsersAccessPage() {
   const [users, setUsers] = useState<User[]>(INIT_USERS);
   const [loading, setLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [search, setSearch] = useState('');
 
   React.useEffect(() => {
@@ -613,7 +625,9 @@ export default function UsersAccessPage() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    setIsDeleting(true);
     const res = await deleteUser(deleteTarget.id);
+    setIsDeleting(false);
     if (res.success) {
       setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
     } else {
@@ -659,10 +673,10 @@ export default function UsersAccessPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Admin Utama', value: totalAdmin, icon: 'shield_person', bg: 'bg-violet-50', color: 'text-violet-700', border: 'border-violet-100', sub: 'Permanen & tidak bisa dihapus' },
-          { label: 'Operator', value: totalOperator, icon: 'manage_accounts', bg: 'bg-sky-50', color: 'text-sky-700', border: 'border-sky-100', sub: 'Pengelola dashboard' },
-          { label: 'Pengguna Mobile', value: totalPengguna, icon: 'smartphone', bg: 'bg-emerald-50', color: 'text-emerald-700', border: 'border-emerald-100', sub: 'Pengguna aplikasi mobile' },
-          { label: 'Akun Aktif', value: totalAktif, icon: 'check_circle', bg: 'bg-teal-50', color: 'text-teal-700', border: 'border-teal-100', sub: `Dari ${users.length} total akun` },
+          { label: 'Admin Utama', value: totalAdmin, icon: 'shield_person', bg: 'bg-violet-50', color: 'text-violet-700', border: 'border-violet-100' },
+          { label: 'Operator', value: totalOperator, icon: 'manage_accounts', bg: 'bg-sky-50', color: 'text-sky-700', border: 'border-sky-100' },
+          { label: 'Pengguna Mobile', value: totalPengguna, icon: 'smartphone', bg: 'bg-emerald-50', color: 'text-emerald-700', border: 'border-emerald-100' },
+          { label: 'Akun Aktif', value: totalAktif, icon: 'check_circle', bg: 'bg-teal-50', color: 'text-teal-700', border: 'border-teal-100' },
         ].map((s) => (
           <div key={s.label} className={`bg-white rounded-2xl p-5 border ${s.border} shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow`}>
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${s.bg}`}>
@@ -671,7 +685,6 @@ export default function UsersAccessPage() {
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{s.label}</p>
               <p className={`text-2xl font-manrope font-extrabold ${s.color}`}>{s.value}</p>
-              <p className="text-[10px] text-slate-400 font-medium mt-0.5">{s.sub}</p>
             </div>
           </div>
         ))}
@@ -916,7 +929,12 @@ export default function UsersAccessPage() {
 
       {/* Delete Dialog */}
       {deleteTarget && (
-        <DeleteDialog user={deleteTarget} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
+        <DeleteDialog
+          user={deleteTarget}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteTarget(null)}
+          loading={isDeleting}
+        />
       )}
 
       {/* Toggle Status Dialog */}

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { user, account } from '@/lib/db/schema';
+import { user, account, session } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import crypto from 'crypto';
 
@@ -105,12 +105,22 @@ export async function toggleUserStatus(id: string, newStatus: string) {
 // 5. Delete User
 export async function deleteUser(id: string) {
     try {
-        // Better Auth API juga bisa menangani penghapusan user, tapi kita bisa pakai Drizzle.
-        // Karena relasi diset CASCADE, menghapus user akan menghapus akun dan sesi.
+        console.log(`[deleteUser] Mencoba menghapus user ID: ${id}`);
+        
+        // Sebagai pengaman jika CASCADE belum aktif di level database, kita hapus data terkait secara eksplisit.
+        // Hapus sesi & akun terlebih dahulu untuk menghindari foreign key constraint.
+        await db.delete(session).where(eq(session.userId, id));
+        await db.delete(account).where(eq(account.userId, id));
+        
+        // Hapus user utama
         await db.delete(user).where(eq(user.id, id));
+        
+        console.log(`[deleteUser] Berhasil menghapus user ID: ${id}`);
+
         revalidatePath('/dashboard/users-access');
         return { success: true, message: 'Pengguna dihapus.' };
     } catch (error: any) {
+        console.error(`[deleteUser] Error saat menghapus user:`, error);
         return { success: false, message: error.message || 'Gagal menghapus pengguna.' };
     }
 }

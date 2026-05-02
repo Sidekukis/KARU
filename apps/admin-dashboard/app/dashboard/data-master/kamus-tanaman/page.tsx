@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { savePlantAction, deletePlantAction, getPlantsAction } from '@/app/actions/master-data.actions';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type Kategori = 'Sayuran' | 'Buah' | 'Palawija' | 'Umbi-umbian' | 'Rempah' | 'Perkebunan' | 'Hias';
@@ -16,115 +17,13 @@ type Tanaman = {
   siklusPanen: string;
   habitat: string;
   deskripsi: string;
-  hama: string[];
-  penyakit: string[];
+  hama: { id: string; nama: string }[];
   foto: string;
   ditambahkan: string;
 };
 
 // ── Mock Data (tanaman umum perkebunan/pertanian) ─────────────────────────────
-const INIT_DATA: Tanaman[] = [
-  {
-    id: 'T-001', namaLokal: 'Padi', namaIlmiah: 'Oryza sativa',
-    kategori: 'Palawija', risikoPenyakit: 'Tinggi',
-    siklusPanen: '3–4 Bulan', habitat: 'Sawah / Lahan Basah',
-    deskripsi: 'Tanaman serealia utama yang menjadi bahan pangan pokok sebagian besar masyarakat Indonesia. Memerlukan air yang cukup dan tanah berlumpur.',
-    hama: ['Wereng cokelat', 'Penggerek batang', 'Walang sangit'],
-    penyakit: ['Blas (Pyricularia oryzae)', 'Hawar daun bakteri', 'Kerdil rumput'],
-    foto: 'https://images.unsplash.com/photo-1536657464919-892534f60d6e?w=200&h=200&fit=crop',
-    ditambahkan: '12 Jan 2025',
-  },
-  {
-    id: 'T-002', namaLokal: 'Jagung Manis', namaIlmiah: 'Zea mays var. saccharata',
-    kategori: 'Palawija', risikoPenyakit: 'Sedang',
-    siklusPanen: '2–3 Bulan', habitat: 'Ladang / Tegalan',
-    deskripsi: 'Tanaman biji-bijian serbaguna yang tumbuh di berbagai jenis tanah. Dimanfaatkan sebagai pangan, pakan ternak, dan bahan baku industri.',
-    hama: ['Ulat grayak', 'Lalat bibit', 'Penggerek buah jagung'],
-    penyakit: ['Bulai (Peronosclerospora maydis)', 'Busuk tongkol', 'Hawar daun'],
-    foto: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=200&h=200&fit=crop',
-    ditambahkan: '15 Jan 2025',
-  },
-  {
-    id: 'T-003', namaLokal: 'Tomat', namaIlmiah: 'Solanum lycopersicum',
-    kategori: 'Sayuran', risikoPenyakit: 'Tinggi',
-    siklusPanen: '3 Bulan', habitat: 'Kebun / Lahan Kering',
-    deskripsi: 'Tanaman hortikultura populer yang buahnya kaya vitamin C dan antioksidan. Sensitif terhadap kelembapan tinggi yang memicu serangan jamur.',
-    hama: ['Kutu kebul', 'Thrips', 'Ulat tanah'],
-    penyakit: ['Layu Fusarium', 'Busuk ujung buah', 'Virus kuning (TYLCV)'],
-    foto: 'https://images.unsplash.com/photo-1546094096-0df4bcaaa337?w=200&h=200&fit=crop',
-    ditambahkan: '20 Jan 2025',
-  },
-  {
-    id: 'T-004', namaLokal: 'Cabai Merah', namaIlmiah: 'Capsicum annuum',
-    kategori: 'Sayuran', risikoPenyakit: 'Tinggi',
-    siklusPanen: '3–4 Bulan', habitat: 'Kebun / Polybag',
-    deskripsi: 'Tanaman rempah buah yang banyak dibudidayakan di Indonesia. Sangat rentan terhadap virus antraknosa dan serangan thrips pada musim kemarau.',
-    hama: ['Thrips', 'Kutu daun', 'Tungau merah'],
-    penyakit: ['Antraknosa (Colletotrichum sp.)', 'Layu bakteri', 'Virus mozaik'],
-    foto: 'https://images.unsplash.com/photo-1583119022894-919a68a3d0e3?w=200&h=200&fit=crop',
-    ditambahkan: '22 Jan 2025',
-  },
-  {
-    id: 'T-005', namaLokal: 'Singkong', namaIlmiah: 'Manihot esculenta',
-    kategori: 'Umbi-umbian', risikoPenyakit: 'Rendah',
-    siklusPanen: '8–12 Bulan', habitat: 'Tegalan / Lahan Marginal',
-    deskripsi: 'Tanaman pangan strategis yang tahan terhadap lahan kering dan miskin hara. Umbinya kaya karbohidrat dan daunnya dapat dikonsumsi sebagai sayur.',
-    hama: ['Tungau merah (Tetranychus urticae)', 'Kutu putih'],
-    penyakit: ['Busuk batang', 'Mosaik vein banding'],
-    foto: 'https://images.unsplash.com/photo-1594282416271-b7c53f1c1f72?w=200&h=200&fit=crop',
-    ditambahkan: '25 Jan 2025',
-  },
-  {
-    id: 'T-006', namaLokal: 'Pisang Kepok', namaIlmiah: 'Musa paradisiaca',
-    kategori: 'Buah', risikoPenyakit: 'Sedang',
-    siklusPanen: '9–12 Bulan', habitat: 'Pekarangan / Kebun',
-    deskripsi: 'Salah satu komoditas buah terluas ditanam di Indonesia. Rentan terhadap penyakit layu Panama yang disebabkan jamur tanah Fusarium oxysporum.',
-    hama: ['Kumbang pisang (Cosmopolites sordidus)', 'Nematoda'],
-    penyakit: ['Layu Panama (Fusarium oxysporum)', 'Bercak daun Sigatoka', 'Bunchy top virus'],
-    foto: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=200&h=200&fit=crop',
-    ditambahkan: '28 Jan 2025',
-  },
-  {
-    id: 'T-007', namaLokal: 'Kelapa Sawit', namaIlmiah: 'Elaeis guineensis',
-    kategori: 'Perkebunan', risikoPenyakit: 'Sedang',
-    siklusPanen: '5 Tahun (mulai produksi)', habitat: 'Perkebunan Tropis',
-    deskripsi: 'Tanaman perkebunan penghasil minyak terbesar di dunia. Budidaya berskala besar dan rentan terhadap penyakit ganoderma pada fase dewasa.',
-    hama: ['Kumbang tanduk (Oryctes rhinoceros)', 'Ulat api', 'Rayap'],
-    penyakit: ['Busuk pangkal batang (Ganoderma)', 'Crown disease', 'Tajuk busuk'],
-    foto: 'https://images.unsplash.com/photo-1611735341450-74d61e660ad2?w=200&h=200&fit=crop',
-    ditambahkan: '2 Feb 2025',
-  },
-  {
-    id: 'T-008', namaLokal: 'Kangkung', namaIlmiah: 'Ipomoea aquatica',
-    kategori: 'Sayuran', risikoPenyakit: 'Rendah',
-    siklusPanen: '1 Bulan', habitat: 'Sawah / Kolam / Pekarangan',
-    deskripsi: 'Sayuran hijau yang sangat cepat tumbuh dan toleran terhadap berbagai kondisi. Sangat populer sebagai konsumsi sehari-hari karena murah dan bergizi.',
-    hama: ['Ulat daun', 'Belalang'],
-    penyakit: ['Karat daun', 'Layu rebah semai'],
-    foto: 'https://images.unsplash.com/photo-1643566827037-a4b10c7dd0cf?w=200&h=200&fit=crop',
-    ditambahkan: '5 Feb 2025',
-  },
-  {
-    id: 'T-009', namaLokal: 'Bawang Merah', namaIlmiah: 'Allium cepa var. aggregatum',
-    kategori: 'Rempah', risikoPenyakit: 'Tinggi',
-    siklusPanen: '2–3 Bulan', habitat: 'Dataran Rendah / Sedang',
-    deskripsi: 'Rempah umbi yang menjadi bumbu dasar masakan Indonesia. Sangat rentan terhadap jamur alternaria dan layu bakteri pada kelembapan tinggi.',
-    hama: ['Ulat bawang (Spodoptera exigua)', 'Thrips'],
-    penyakit: ['Bercak ungu (Alternaria porri)', 'Busuk umbi', 'Layu Fusarium'],
-    foto: 'https://images.unsplash.com/photo-1518977956812-cd3dbadaaf31?w=200&h=200&fit=crop',
-    ditambahkan: '8 Feb 2025',
-  },
-  {
-    id: 'T-010', namaLokal: 'Karet', namaIlmiah: 'Hevea brasiliensis',
-    kategori: 'Perkebunan', risikoPenyakit: 'Sedang',
-    siklusPanen: '5–7 Tahun (mulai sadap)', habitat: 'Perkebunan Tropis',
-    deskripsi: 'Tanaman perkebunan penghasil lateks alam. Banyak dibudidayakan di Sumatra dan Kalimantan. Peka terhadap penyakit gugur daun terutama di musim hujan.',
-    hama: ['Rayap', 'Belalang'],
-    penyakit: ['Gugur daun (Colletotrichum)', 'Hawar daun (Phytophthora)', 'Mouldy rot'],
-    foto: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=200&h=200&fit=crop',
-    ditambahkan: '12 Feb 2025',
-  },
-];
+const INIT_DATA: Tanaman[] = [];
 
 const KATEGORI_OPTS: Kategori[] = ['Sayuran', 'Buah', 'Palawija', 'Umbi-umbian', 'Rempah', 'Perkebunan', 'Hias'];
 const RISIKO_OPTS: RisikoPenyakit[] = ['Tinggi', 'Sedang', 'Rendah'];
@@ -132,13 +31,13 @@ const RISIKO_OPTS: RisikoPenyakit[] = ['Tinggi', 'Sedang', 'Rendah'];
 // ── Badge helpers ──────────────────────────────────────────────────────────────
 function KategoriBadge({ k }: { k: Kategori }) {
   const map: Record<Kategori, string> = {
-    'Sayuran':    'bg-emerald-100 text-emerald-800',
-    'Buah':       'bg-orange-100 text-orange-800',
-    'Palawija':   'bg-yellow-100 text-yellow-800',
-    'Umbi-umbian':'bg-amber-100 text-amber-800',
-    'Rempah':     'bg-rose-100 text-rose-800',
+    'Sayuran': 'bg-emerald-100 text-emerald-800',
+    'Buah': 'bg-orange-100 text-orange-800',
+    'Palawija': 'bg-yellow-100 text-yellow-800',
+    'Umbi-umbian': 'bg-amber-100 text-amber-800',
+    'Rempah': 'bg-rose-100 text-rose-800',
     'Perkebunan': 'bg-teal-100 text-teal-800',
-    'Hias':       'bg-purple-100 text-purple-800',
+    'Hias': 'bg-purple-100 text-purple-800',
   };
   return (
     <span className={`inline-flex items-center text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${map[k]}`}>
@@ -168,37 +67,42 @@ type DrawerMode = 'view' | 'add' | 'edit';
 const EMPTY_FORM: Omit<Tanaman, 'id' | 'ditambahkan'> = {
   namaLokal: '', namaIlmiah: '', kategori: 'Sayuran', risikoPenyakit: 'Sedang',
   siklusPanen: '', habitat: '', deskripsi: '',
-  hama: [], penyakit: [], foto: '',
+  hama: [], foto: '',
 };
 
 function TanamanDrawer({
-  mode, tanaman, onClose, onSave,
+  mode, tanaman, availablePests, onClose, onSave,
 }: {
   mode: DrawerMode;
   tanaman: Tanaman | null;
+  availablePests: any[];
   onClose: () => void;
-  onSave: (data: Tanaman) => void;
+  onSave: (data: Tanaman, file: File | null) => void;
 }) {
   const [form, setForm] = useState<Omit<Tanaman, 'id' | 'ditambahkan'>>(
     tanaman ? { ...tanaman } : { ...EMPTY_FORM }
   );
   const [drawerMode, setDrawerMode] = useState<DrawerMode>(mode);
-  const [hamaInput, setHamaInput] = useState(form.hama.join(', '));
-  const [penyakitInput, setPenyakitInput] = useState(form.penyakit.join(', '));
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const togglePest = (pestId: string, pestName: string) => {
+    setForm(prev => {
+      const exists = prev.hama.find(p => p.id === pestId);
+      if (exists) return { ...prev, hama: prev.hama.filter(p => p.id !== pestId) };
+      return { ...prev, hama: [...prev.hama, { id: pestId, nama: pestName }] };
+    });
+  };
+
   const handleSave = () => {
     const saved: Tanaman = {
-      ...(tanaman ?? { id: `T-${Date.now()}`, ditambahkan: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) }),
+      ...(tanaman ?? { id: '', ditambahkan: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) }),
       ...form,
-      hama: hamaInput.split(',').map(s => s.trim()).filter(Boolean),
-      penyakit: penyakitInput.split(',').map(s => s.trim()).filter(Boolean),
     };
-    onSave(saved);
-    onClose();
+    onSave(saved, fotoFile);
   };
 
   const isEditable = drawerMode === 'add' || drawerMode === 'edit';
@@ -245,10 +149,15 @@ function TanamanDrawer({
           {/* Foto URL input (edit/add) */}
           {isEditable && (
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">URL Foto</label>
-              <input type="text" name="foto" value={form.foto} onChange={handleInput}
-                placeholder="https://..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-medium text-slate-800 placeholder:text-slate-300 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 outline-none transition-all" />
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Unggah Foto (Atau URL)</label>
+              <div className="flex flex-col gap-2">
+                <input type="file" accept="image/*" onChange={(e) => setFotoFile(e.target.files?.[0] || null)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium text-slate-800 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer transition-all" />
+                <p className="text-xs text-slate-400 font-bold px-1">Atau gunakan URL Foto:</p>
+                <input type="text" name="foto" value={form.foto || ''} onChange={handleInput}
+                  placeholder="https://..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-medium text-slate-800 placeholder:text-slate-300 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 outline-none transition-all" />
+              </div>
             </div>
           )}
 
@@ -341,39 +250,28 @@ function TanamanDrawer({
             )}
           </div>
 
-          {/* Hama */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[14px] text-red-400" style={{ fontVariationSettings: "'FILL' 1" }}>pest_control</span>
-              Hama Umum
-            </label>
-            {isEditable ? (
-              <input type="text" value={hamaInput} onChange={e => setHamaInput(e.target.value)}
-                placeholder="Pisahkan dengan koma, cth: Wereng, Thrips"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-medium text-slate-800 placeholder:text-slate-300 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 outline-none transition-all" />
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {form.hama.map(h => (
-                  <span key={h} className="bg-red-50 text-red-700 text-xs font-semibold px-2.5 py-1 rounded-lg border border-red-100">{h}</span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Penyakit */}
+          {/* Penyakit & Hama Terkait */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[14px] text-amber-500" style={{ fontVariationSettings: "'FILL' 1" }}>coronavirus</span>
-              Penyakit yang Sering Menyerang
+              Penyakit / Hama Terkait
             </label>
             {isEditable ? (
-              <input type="text" value={penyakitInput} onChange={e => setPenyakitInput(e.target.value)}
-                placeholder="Pisahkan dengan koma, cth: Blas, Busuk akar"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-medium text-slate-800 placeholder:text-slate-300 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 outline-none transition-all" />
+              <div className="flex flex-wrap gap-2">
+                {availablePests.map(p => {
+                  const isSelected = form.hama.some(h => h.id === p.id);
+                  return (
+                    <button key={p.id} type="button" onClick={() => togglePest(p.id, p.nama)}
+                      className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all ${isSelected ? 'bg-amber-500 border-amber-500 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300'}`}>
+                      {p.nama}
+                    </button>
+                  );
+                })}
+              </div>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {form.penyakit.map(p => (
-                  <span key={p} className="bg-amber-50 text-amber-800 text-xs font-semibold px-2.5 py-1 rounded-lg border border-amber-100">{p}</span>
+                {form.hama.map(h => (
+                  <span key={h.id} className="bg-amber-50 text-amber-800 text-xs font-semibold px-2.5 py-1 rounded-lg border border-amber-100">{h.nama}</span>
                 ))}
               </div>
             )}
@@ -435,7 +333,13 @@ function DeleteDialog({ tanaman, onConfirm, onCancel }: { tanaman: Tanaman; onCo
             </div>
           </div>
           <div className="bg-slate-50 rounded-xl px-4 py-3 mb-5 flex items-center gap-3 border border-slate-100">
-            <img src={tanaman.foto} alt={tanaman.namaLokal} className="w-10 h-10 rounded-lg object-cover" />
+            {tanaman.foto ? (
+              <img src={tanaman.foto} alt={tanaman.namaLokal} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-slate-400 text-sm">image</span>
+              </div>
+            )}
             <div>
               <p className="text-sm font-bold text-primary">{tanaman.namaLokal}</p>
               <p className="text-xs italic text-slate-500">{tanaman.namaIlmiah}</p>
@@ -454,12 +358,48 @@ function DeleteDialog({ tanaman, onConfirm, onCancel }: { tanaman: Tanaman; onCo
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function KamusTanamanPage() {
-  const [data, setData] = useState<Tanaman[]>(INIT_DATA);
+  const [data, setData] = useState<Tanaman[]>([]);
+  const [availablePests, setAvailablePests] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterKategori, setFilterKategori] = useState<string>('semua');
   const [filterRisiko, setFilterRisiko] = useState<string>('semua');
   const [drawerState, setDrawerState] = useState<{ open: boolean; mode: DrawerMode; tanaman: Tanaman | null }>({ open: false, mode: 'view', tanaman: null });
   const [deleteTarget, setDeleteTarget] = useState<Tanaman | null>(null);
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const { getPestsAction } = await import('@/app/actions/master-data.actions');
+      const result = await getPlantsAction();
+      const pestsRes = await getPestsAction();
+      setAvailablePests(pestsRes);
+
+      // Mapping result dari database ke format Tanaman untuk UI
+      const mapped = result.map((r: any) => ({
+        id: r.id,
+        namaLokal: r.namaLokal,
+        namaIlmiah: r.namaIlmiah || '',
+        kategori: r.kategori || 'Sayuran',
+        risikoPenyakit: r.risikoPenyakit || 'Sedang',
+        siklusPanen: r.siklusPanen || '',
+        habitat: r.habitat || '',
+        deskripsi: r.deskripsi || '',
+        hama: r.hama || [],
+        foto: r.foto || '',
+        ditambahkan: r.createdAt ? new Date(r.createdAt).toLocaleDateString('id-ID') : '',
+      }));
+      setData(mapped as Tanaman[]);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const filtered = data.filter(t => {
     const matchSearch = t.namaLokal.toLowerCase().includes(search.toLowerCase()) || t.namaIlmiah.toLowerCase().includes(search.toLowerCase());
@@ -468,18 +408,38 @@ export default function KamusTanamanPage() {
     return matchSearch && matchKat && matchRisiko;
   });
 
-  const handleSave = (saved: Tanaman) => {
-    setData(prev => {
-      const idx = prev.findIndex(t => t.id === saved.id);
-      if (idx >= 0) { const next = [...prev]; next[idx] = saved; return next; }
-      return [saved, ...prev];
-    });
+  const handleSave = async (saved: Tanaman, file: File | null) => {
+    const formData = new FormData();
+    if (saved.id && saved.id !== '') formData.append('id', saved.id);
+    formData.append('namaLokal', saved.namaLokal);
+    formData.append('namaIlmiah', saved.namaIlmiah);
+    formData.append('kategori', saved.kategori);
+    formData.append('risikoPenyakit', saved.risikoPenyakit);
+    formData.append('siklusPanen', saved.siklusPanen);
+    formData.append('habitat', saved.habitat);
+    formData.append('deskripsi', saved.deskripsi);
+    formData.append('fotoUrl', saved.foto);
+    formData.append('pestIds', JSON.stringify(saved.hama.map(h => h.id)));
+    if (file) formData.append('fotoFile', file);
+
+    const res = await savePlantAction(formData);
+    if (res.success) {
+      fetchData();
+      setDrawerState(s => ({ ...s, open: false }));
+    } else {
+      alert('Gagal menyimpan tanaman: ' + res.error);
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
-    setData(prev => prev.filter(t => t.id !== deleteTarget.id));
-    setDeleteTarget(null);
+    const res = await deletePlantAction(deleteTarget.id);
+    if (res.success) {
+      fetchData();
+      setDeleteTarget(null);
+    } else {
+      alert('Gagal menghapus tanaman: ' + res.error);
+    }
   };
 
   const openDrawer = (mode: DrawerMode, tanaman: Tanaman | null = null) =>
@@ -562,7 +522,7 @@ export default function KamusTanamanPage() {
             <option value="semua">Semua Kategori</option>
             {KATEGORI_OPTS.map(k => <option key={k}>{k}</option>)}
           </select>
-          <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-sm">expand_more</span>
+          <span className="material-symbols absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-sm">expand_more</span>
         </div>
 
         {/* Risiko filter */}
@@ -604,8 +564,12 @@ export default function KamusTanamanPage() {
               ) : filtered.map(t => (
                 <tr key={t.id} className="hover:bg-slate-50/60 transition-colors group">
                   <td className="px-6 py-4">
-                    <div className="w-14 h-14 rounded-xl overflow-hidden border border-slate-100 shadow-sm flex-shrink-0">
-                      <img src={t.foto} alt={t.namaLokal} className="w-full h-full object-cover" />
+                    <div className="w-14 h-14 rounded-xl overflow-hidden border border-slate-100 shadow-sm flex-shrink-0 bg-slate-50 flex items-center justify-center">
+                      {t.foto ? (
+                        <img src={t.foto} alt={t.namaLokal} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="material-symbols-outlined text-slate-300">image</span>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-4 min-w-[160px]">
@@ -620,7 +584,7 @@ export default function KamusTanamanPage() {
                   <td className="px-4 py-4 max-w-[200px]">
                     <div className="flex flex-wrap gap-1">
                       {t.hama.slice(0, 2).map(h => (
-                        <span key={h} className="text-[10px] bg-red-50 text-red-600 font-semibold px-2 py-0.5 rounded-md border border-red-100">{h}</span>
+                        <span key={h.id} className="text-[10px] bg-red-50 text-red-600 font-semibold px-2 py-0.5 rounded-md border border-red-100">{h.nama}</span>
                       ))}
                       {t.hama.length > 2 && <span className="text-[10px] bg-slate-100 text-slate-500 font-semibold px-2 py-0.5 rounded-md">+{t.hama.length - 2}</span>}
                     </div>
@@ -670,6 +634,7 @@ export default function KamusTanamanPage() {
         <TanamanDrawer
           mode={drawerState.mode}
           tanaman={drawerState.tanaman}
+          availablePests={availablePests}
           onClose={() => setDrawerState(s => ({ ...s, open: false }))}
           onSave={handleSave}
         />

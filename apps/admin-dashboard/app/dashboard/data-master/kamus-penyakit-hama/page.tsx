@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { savePestAction, deletePestAction, getPestsAction } from '@/app/actions/master-data.actions';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type JenisEntri = 'Penyakit' | 'Hama';
@@ -24,106 +25,13 @@ type EntriPenyakitHama = {
   jenis: JenisEntri;
   kategori: KategoriPenyakit;
   tingkatRisiko: TingkatRisiko;
-  tanamanInang: string[];     // tanaman yang rentan terserang
-  gejala: string;             // gejala serangan
-  penanganan: string;         // cara pengendalian singkat
+  gejala: string;
+  penanganan: string;
   foto: string;
   ditambahkan: string;
 };
 
-// ── Mock Data ──────────────────────────────────────────────────────────────────
-const INIT_DATA: EntriPenyakitHama[] = [
-  {
-    id: 'PH-001', nama: 'Blas', namaIlmiah: 'Pyricularia oryzae',
-    jenis: 'Penyakit', kategori: 'Jamur / Fungi', tingkatRisiko: 'Tinggi',
-    tanamanInang: ['Padi'],
-    gejala: 'Bercak berbentuk belah ketupat pada daun berwarna cokelat keabu-abuan dengan tepi kuning. Pada serangan berat dapat menyebabkan kematian rumpun.',
-    penanganan: 'Gunakan varietas tahan, aplikasi fungisida berbahan aktif trisiklazol atau edifenphos. Atur jarak tanam dan kurangi penggunaan pupuk N berlebihan.',
-    foto: 'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=200&h=200&fit=crop',
-    ditambahkan: '10 Jan 2025',
-  },
-  {
-    id: 'PH-002', nama: 'Wereng Cokelat', namaIlmiah: 'Nilaparvata lugens',
-    jenis: 'Hama', kategori: 'Hama Pengisap', tingkatRisiko: 'Tinggi',
-    tanamanInang: ['Padi'],
-    gejala: 'Tanaman menguning dan mengering dari bawah (hopperburn). Koloni wereng terlihat di pangkal batang. Dapat menularkan virus kerdil rumput.',
-    penanganan: 'Tanam varietas tahan wereng, pertahankan populasi musuh alami (laba-laba, kepinding), gunakan insektisida imidakloprid hanya saat puncak serangan.',
-    foto: 'https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=200&h=200&fit=crop',
-    ditambahkan: '12 Jan 2025',
-  },
-  {
-    id: 'PH-003', nama: 'Layu Fusarium', namaIlmiah: 'Fusarium oxysporum',
-    jenis: 'Penyakit', kategori: 'Jamur / Fungi', tingkatRisiko: 'Tinggi',
-    tanamanInang: ['Tomat', 'Cabai Merah', 'Bawang Merah', 'Pisang Kepok'],
-    gejala: 'Daun layu dimulai dari bagian bawah, menguning secara asimetris. Pembuluh batang berwarna cokelat jika dibelah. Tanaman akhirnya mati.',
-    penanganan: 'Pilih benih bersertifikat, rotasi tanaman, aplikasi Trichoderma sp. sebagai agen hayati, hindari luka pada akar saat pengolahan tanah.',
-    foto: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?w=200&h=200&fit=crop',
-    ditambahkan: '15 Jan 2025',
-  },
-  {
-    id: 'PH-004', nama: 'Antraknosa', namaIlmiah: 'Colletotrichum capsici',
-    jenis: 'Penyakit', kategori: 'Jamur / Fungi', tingkatRisiko: 'Tinggi',
-    tanamanInang: ['Cabai Merah', 'Karet'],
-    gejala: 'Bercak cokelat kehitaman pada buah dengan pusat berwarna krem, terlihat seperti luka cekung. Buah membusuk dari ujung dan gugur prematur.',
-    penanganan: 'Panen buah sebelum terlalu matang, semprot fungisida mankozeb atau klorotalonil, buang dan musnahkan buah terinfeksi dari kebun.',
-    foto: 'https://images.unsplash.com/photo-1559181567-c3190ca9d1da?w=200&h=200&fit=crop',
-    ditambahkan: '18 Jan 2025',
-  },
-  {
-    id: 'PH-005', nama: 'Thrips', namaIlmiah: 'Thrips palmi',
-    jenis: 'Hama', kategori: 'Hama Pengisap', tingkatRisiko: 'Sedang',
-    tanamanInang: ['Cabai Merah', 'Bawang Merah', 'Tomat'],
-    gejala: 'Daun keriting ke atas, permukaan bawah berbercak perak keperakan. Bunga rontok lebih awal. Serangan berat menyebabkan pertumbuhan kerdil.',
-    penanganan: 'Pasang perangkap lengket biru/kuning, semprotkan spinosad atau abamektin pada pagi hari, jaga kelembapan kebun untuk mengurangi populasi.',
-    foto: 'https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=200&h=200&fit=crop',
-    ditambahkan: '20 Jan 2025',
-  },
-  {
-    id: 'PH-006', nama: 'Ulat Grayak', namaIlmiah: 'Spodoptera frugiperda',
-    jenis: 'Hama', kategori: 'Hama Pengunyah', tingkatRisiko: 'Tinggi',
-    tanamanInang: ['Jagung Manis', 'Padi'],
-    gejala: 'Daun berlubang tidak beraturan, kotoran larva berupa serbuk kasar di dalam corong daun. Serangan pada tongkol jagung muda menyebabkan gagal panen.',
-    penanganan: 'Gunakan varietas toleran, aplikasi Bt (Bacillus thuringiensis) secara hayati, insektisida emamektin benzoat pada serangan berat, pemantauan rutin.',
-    foto: 'https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?w=200&h=200&fit=crop',
-    ditambahkan: '22 Jan 2025',
-  },
-  {
-    id: 'PH-007', nama: 'Virus Kuning Tomat', namaIlmiah: 'Tomato Yellow Leaf Curl Virus (TYLCV)',
-    jenis: 'Penyakit', kategori: 'Virus', tingkatRisiko: 'Tinggi',
-    tanamanInang: ['Tomat', 'Cabai Merah'],
-    gejala: 'Daun muda menggulung ke atas dan menguning, pertumbuhan terhambat parah. Tidak ada obat setelah tanaman terinfeksi. Ditularkan oleh kutu kebul.',
-    penanganan: 'Kendalikan kutu kebul (vektor) dengan insektisida sistemik, cabut dan musnahkan tanaman terinfeksi, gunakan mulsa plastik perak untuk mengusir kutu kebul.',
-    foto: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=200&h=200&fit=crop',
-    ditambahkan: '25 Jan 2025',
-  },
-  {
-    id: 'PH-008', nama: 'Ganoderma (Busuk Pangkal Batang)', namaIlmiah: 'Ganoderma boninense',
-    jenis: 'Penyakit', kategori: 'Jamur / Fungi', tingkatRisiko: 'Tinggi',
-    tanamanInang: ['Kelapa Sawit'],
-    gejala: 'Pelepah bawah layu dan patah, tumbuh tubuh buah jamur (bracket fungi) berwarna merah-cokelat di pangkal batang. Dalam tanah terjadi pembusukan basah.',
-    penanganan: 'Tidak ada obat efektif setelah infeksi masif. Pencegahan: injeksi heksakonazol sejak dini, sanitasi sisa panen, rotasi dengan tanaman bukan inang.',
-    foto: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=200&h=200&fit=crop',
-    ditambahkan: '28 Jan 2025',
-  },
-  {
-    id: 'PH-009', nama: 'Bercak Ungu Bawang', namaIlmiah: 'Alternaria porri',
-    jenis: 'Penyakit', kategori: 'Jamur / Fungi', tingkatRisiko: 'Sedang',
-    tanamanInang: ['Bawang Merah'],
-    gejala: 'Bercak kecil berwarna putih pucat kemudian berkembang menjadi ungu kecokelatan dengan lingkaran konsentris. Daun layu dan mengering pada serangan berat.',
-    penanganan: 'Hindari penanaman terlalu rapat, semprot fungisida iprodion atau mankozeb setiap 7 hari sejak gejala muncul, kurangi irigasi berlebih.',
-    foto: 'https://images.unsplash.com/photo-1518977956812-cd3dbadaaf31?w=200&h=200&fit=crop',
-    ditambahkan: '30 Jan 2025',
-  },
-  {
-    id: 'PH-010', nama: 'Kumbang Tanduk Kelapa Sawit', namaIlmiah: 'Oryctes rhinoceros',
-    jenis: 'Hama', kategori: 'Hama Penggerek', tingkatRisiko: 'Sedang',
-    tanamanInang: ['Kelapa Sawit'],
-    gejala: 'Lubang berbentuk segitiga pada daun muda yang belum membuka (tombak), menggerek ke arah titik tumbuh. Serangan berulang melemahkan tanaman dewasa.',
-    penanganan: 'Pemasangan perangkap feromon, aplikasi jamur Metarhizium anisopliae secara hayati, musnahkan tunggul bekas tebangan sebagai sumber sarang larva.',
-    foto: 'https://images.unsplash.com/photo-1534361960057-19f4434dce8b?w=200&h=200&fit=crop',
-    ditambahkan: '3 Feb 2025',
-  },
-];
+const INIT_DATA: EntriPenyakitHama[] = [];
 
 const JENIS_OPTS: JenisEntri[] = ['Penyakit', 'Hama'];
 const KATEGORI_OPTS: KategoriPenyakit[] = [
@@ -167,7 +75,7 @@ type DrawerMode = 'view' | 'add' | 'edit';
 
 const EMPTY_FORM: Omit<EntriPenyakitHama, 'id' | 'ditambahkan'> = {
   nama: '', namaIlmiah: '', jenis: 'Penyakit', kategori: 'Jamur / Fungi',
-  tingkatRisiko: 'Sedang', tanamanInang: [], gejala: '', penanganan: '', foto: '',
+  tingkatRisiko: 'Sedang', gejala: '', penanganan: '', foto: '',
 };
 
 function EntriDrawer({
@@ -176,13 +84,13 @@ function EntriDrawer({
   mode: DrawerMode;
   entri: EntriPenyakitHama | null;
   onClose: () => void;
-  onSave: (data: EntriPenyakitHama) => void;
+  onSave: (data: EntriPenyakitHama, file: File | null) => void;
 }) {
   const [form, setForm] = useState<Omit<EntriPenyakitHama, 'id' | 'ditambahkan'>>(
     entri ? { ...entri } : { ...EMPTY_FORM }
   );
   const [drawerMode, setDrawerMode] = useState<DrawerMode>(mode);
-  const [inangInput, setInangInput] = useState((entri?.tanamanInang ?? []).join(', '));
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -191,14 +99,12 @@ function EntriDrawer({
   const handleSave = () => {
     const saved: EntriPenyakitHama = {
       ...(entri ?? {
-        id: `PH-${Date.now()}`,
+        id: '',
         ditambahkan: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
       }),
       ...form,
-      tanamanInang: inangInput.split(',').map(s => s.trim()).filter(Boolean),
     };
-    onSave(saved);
-    onClose();
+    onSave(saved, fotoFile);
   };
 
   const isEditable = drawerMode === 'add' || drawerMode === 'edit';
@@ -246,10 +152,15 @@ function EntriDrawer({
           {/* Foto URL (add/edit) */}
           {isEditable && (
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">URL Foto</label>
-              <input type="text" name="foto" value={form.foto} onChange={handleInput}
-                placeholder="https://..."
-                className="field" />
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Unggah Foto (Atau URL)</label>
+              <div className="flex flex-col gap-2">
+                <input type="file" accept="image/*" onChange={(e) => setFotoFile(e.target.files?.[0] || null)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm font-medium text-slate-800 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer transition-all" />
+                <p className="text-xs text-slate-400 font-bold px-1">Atau gunakan URL Foto:</p>
+                <input type="text" name="foto" value={form.foto || ''} onChange={handleInput}
+                  placeholder="https://..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-medium text-slate-800 placeholder:text-slate-300 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 outline-none transition-all" />
+              </div>
             </div>
           )}
 
@@ -332,28 +243,7 @@ function EntriDrawer({
             </div>
           )}
 
-          {/* Tanaman Inang */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[14px] text-emerald-600" style={{ fontVariationSettings: "'FILL' 1" }}>eco</span>
-              Tanaman Inang
-            </label>
-            {isEditable ? (
-              <>
-                <input type="text" value={inangInput} onChange={e => setInangInput(e.target.value)}
-                  placeholder="Pisahkan dengan koma, cth: Padi, Jagung"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-medium text-slate-800 placeholder:text-slate-300 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 outline-none transition-all" />
-                <p className="text-[10px] text-slate-400 pl-1">Tandai tanaman yang rentan terhadap penyakit/hama ini</p>
-              </>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {form.tanamanInang.map(t => (
-                  <span key={t} className="bg-emerald-50 text-emerald-800 text-xs font-semibold px-2.5 py-1 rounded-lg border border-emerald-100">{t}</span>
-                ))}
-                {form.tanamanInang.length === 0 && <span className="text-xs text-slate-400">—</span>}
-              </div>
-            )}
-          </div>
+
 
           {/* Gejala */}
           <div className="space-y-1.5">
@@ -435,7 +325,13 @@ function DeleteDialog({ entri, onConfirm, onCancel }: { entri: EntriPenyakitHama
             </div>
           </div>
           <div className="bg-slate-50 rounded-xl px-4 py-3 mb-5 flex items-center gap-3 border border-slate-100">
-            <img src={entri.foto} alt={entri.nama} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+            {entri.foto ? (
+              <img src={entri.foto} alt={entri.nama} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-slate-400 text-sm">image</span>
+              </div>
+            )}
             <div>
               <p className="text-sm font-bold text-primary">{entri.nama}</p>
               <p className="text-xs italic text-slate-500">{entri.namaIlmiah}</p>
@@ -454,12 +350,41 @@ function DeleteDialog({ entri, onConfirm, onCancel }: { entri: EntriPenyakitHama
 
 // ── Halaman Utama ──────────────────────────────────────────────────────────────
 export default function KamusPenyakitHamaPage() {
-  const [data, setData] = useState<EntriPenyakitHama[]>(INIT_DATA);
+  const [data, setData] = useState<EntriPenyakitHama[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterJenis, setFilterJenis] = useState<string>('semua');
   const [filterRisiko, setFilterRisiko] = useState<string>('semua');
   const [drawerState, setDrawerState] = useState<{ open: boolean; mode: DrawerMode; entri: EntriPenyakitHama | null }>({ open: false, mode: 'view', entri: null });
   const [deleteTarget, setDeleteTarget] = useState<EntriPenyakitHama | null>(null);
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const result = await getPestsAction();
+      const mapped = result.map((r: any) => ({
+        id: r.id,
+        nama: r.nama,
+        namaIlmiah: r.namaIlmiah || '',
+        jenis: r.jenis || 'Penyakit',
+        kategori: r.kategori || 'Jamur / Fungi',
+        tingkatRisiko: r.tingkatRisiko || 'Sedang',
+        gejala: r.gejala || '',
+        penanganan: r.penanganan || '',
+        foto: r.foto || '',
+        ditambahkan: r.createdAt ? new Date(r.createdAt).toLocaleDateString('id-ID') : '',
+      }));
+      setData(mapped as EntriPenyakitHama[]);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const filtered = data.filter(e => {
     const matchSearch = e.nama.toLowerCase().includes(search.toLowerCase()) || e.namaIlmiah.toLowerCase().includes(search.toLowerCase());
@@ -468,18 +393,37 @@ export default function KamusPenyakitHamaPage() {
     return matchSearch && matchJenis && matchRisiko;
   });
 
-  const handleSave = (saved: EntriPenyakitHama) => {
-    setData(prev => {
-      const idx = prev.findIndex(e => e.id === saved.id);
-      if (idx >= 0) { const next = [...prev]; next[idx] = saved; return next; }
-      return [saved, ...prev];
-    });
+  const handleSave = async (saved: EntriPenyakitHama, file: File | null) => {
+    const formData = new FormData();
+    if (saved.id && saved.id !== '') formData.append('id', saved.id);
+    formData.append('nama', saved.nama);
+    formData.append('namaIlmiah', saved.namaIlmiah);
+    formData.append('jenis', saved.jenis);
+    formData.append('kategori', saved.kategori);
+    formData.append('tingkatRisiko', saved.tingkatRisiko);
+    formData.append('gejala', saved.gejala);
+    formData.append('penanganan', saved.penanganan);
+    formData.append('fotoUrl', saved.foto);
+    if (file) formData.append('fotoFile', file);
+
+    const res = await savePestAction(formData);
+    if (res.success) {
+      fetchData();
+      setDrawerState(s => ({ ...s, open: false }));
+    } else {
+      alert('Gagal menyimpan data: ' + res.error);
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
-    setData(prev => prev.filter(e => e.id !== deleteTarget.id));
-    setDeleteTarget(null);
+    const res = await deletePestAction(deleteTarget.id);
+    if (res.success) {
+      fetchData();
+      setDeleteTarget(null);
+    } else {
+      alert('Gagal menghapus data: ' + res.error);
+    }
   };
 
   const openDrawer = (mode: DrawerMode, entri: EntriPenyakitHama | null = null) =>
@@ -582,13 +526,12 @@ export default function KamusPenyakitHamaPage() {
                 <th className="px-4 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Jenis</th>
                 <th className="px-4 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Kategori</th>
                 <th className="px-4 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Risiko</th>
-                <th className="px-4 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tanaman Inang</th>
                 <th className="px-4 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filtered.length === 0 ? (
-                <tr><td colSpan={7} className="py-16 text-center">
+                <tr><td colSpan={6} className="py-16 text-center">
                   <span className="material-symbols-outlined text-4xl text-slate-300 mb-2 block">search_off</span>
                   <p className="text-slate-500 font-bold">Tidak ada entri yang cocok</p>
                   <button type="button" onClick={() => { setSearch(''); setFilterJenis('semua'); setFilterRisiko('semua'); }}
@@ -597,8 +540,12 @@ export default function KamusPenyakitHamaPage() {
               ) : filtered.map(e => (
                 <tr key={e.id} className="hover:bg-slate-50/60 transition-colors group">
                   <td className="px-6 py-4">
-                    <div className="w-14 h-14 rounded-xl overflow-hidden border border-slate-100 shadow-sm flex-shrink-0">
-                      <img src={e.foto} alt={e.nama} className="w-full h-full object-cover" />
+                    <div className="w-14 h-14 rounded-xl overflow-hidden border border-slate-100 shadow-sm flex-shrink-0 bg-slate-50 flex items-center justify-center">
+                      {e.foto ? (
+                        <img src={e.foto} alt={e.nama} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="material-symbols-outlined text-slate-300">image</span>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-4 min-w-[180px]">
@@ -610,16 +557,6 @@ export default function KamusPenyakitHamaPage() {
                     <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">{e.kategori}</span>
                   </td>
                   <td className="px-4 py-4"><RisikoBadge r={e.tingkatRisiko} /></td>
-                  <td className="px-4 py-4 max-w-[180px]">
-                    <div className="flex flex-wrap gap-1">
-                      {e.tanamanInang.slice(0, 2).map(t => (
-                        <span key={t} className="text-[10px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-md border border-emerald-100">{t}</span>
-                      ))}
-                      {e.tanamanInang.length > 2 && (
-                        <span className="text-[10px] bg-slate-100 text-slate-500 font-semibold px-2 py-0.5 rounded-md">+{e.tanamanInang.length - 2}</span>
-                      )}
-                    </div>
-                  </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center justify-center gap-1.5">
                       <button type="button" title="Edit" onClick={() => openDrawer('edit', e)}

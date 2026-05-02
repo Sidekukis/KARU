@@ -25,14 +25,14 @@ export const session = pgTable("session", {
 	updatedAt: timestamp("updatedAt").notNull(),
 	ipAddress: text("ipAddress"),
 	userAgent: text("userAgent"),
-	userId: text("userId").notNull().references(() => user.id)
+	userId: text("userId").notNull().references(() => user.id, { onDelete: 'cascade' })
 });
 
 export const account = pgTable("account", {
 	id: text("id").primaryKey(),
 	accountId: text("accountId").notNull(),
 	providerId: text("providerId").notNull(),
-	userId: text("userId").notNull().references(() => user.id),
+	userId: text("userId").notNull().references(() => user.id, { onDelete: 'cascade' }),
 	accessToken: text("accessToken"),
 	refreshToken: text("refreshToken"),
 	idToken: text("idToken"),
@@ -96,7 +96,7 @@ export const sops = pgTable('sops', {
   urgensi: varchar('urgensi', { length: 50 }),
   langkah: jsonb('langkah').notNull(), // Menyimpan array string
   pdfUrl: text('pdf_url'),
-  createdBy: text('created_by').references(() => user.id),
+  createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -147,7 +147,7 @@ export const qrBatches = pgTable('qr_batches', {
   nodeCount: integer('node_count').notNull(),
   prefix: varchar('prefix', { length: 50 }),
   status: varchar('status', { length: 50 }).default('Belum Dicetak'),
-  createdBy: text('created_by').references(() => user.id),
+  createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -163,7 +163,7 @@ export const qrNodes = pgTable('qr_nodes', {
 ========================================================================= */
 export const aiScanLogs = pgTable('ai_scan_logs', {
   id: serial('id').primaryKey(),
-  userId: text('user_id').references(() => user.id),
+  userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
   workspaceId: varchar('workspace_id', { length: 20 }).references(() => workspaces.id),
   qrNodeId: varchar('qr_node_id', { length: 100 }).references(() => qrNodes.id), // Opsional
   location: geometry('location', { type: 'point', mode: 'tuple', srid: 4326 }).notNull(),
