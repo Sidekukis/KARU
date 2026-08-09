@@ -547,7 +547,7 @@ class _WorkspaceListScreenState extends State<WorkspaceListScreen> {
   Widget _buildWorkspaceCard(dynamic ws) {
     final name = ws['name'] ?? '-';
     final category = ws['category'] ?? '';
-    final imageUrl = _resolveImageUrl(ws['imageUrl']);
+    final imageUrl = _resolveImageUrl(ws['image'] ?? ws['imageUrl']);
     final area = ws['area'];
     final unit = _getAreaUnit(category);
 

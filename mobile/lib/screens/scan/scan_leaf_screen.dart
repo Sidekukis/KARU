@@ -91,7 +91,7 @@ class _ScanLeafScreenState extends State<ScanLeafScreen> {
       }
 
       _currentPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.best,
       );
     } catch (e) {
       debugPrint('Location Error: $e');

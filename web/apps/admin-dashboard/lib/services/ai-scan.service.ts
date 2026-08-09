@@ -123,7 +123,9 @@ export class AiScanService {
     }
 
     // 2. Cek Geofence Validation: Point in Polygon
-    const isInside = await this.workspaceRepo.isPointInsideWorkspace(workspaceId, lng, lat);
+    const numLng = Number(lng);
+    const numLat = Number(lat);
+    const isInside = await this.workspaceRepo.isPointInsideWorkspace(workspaceId, numLng, numLat);
     const validationStatus = isInside ? 'Valid' : 'Di Luar Batas';
 
     // 3. Simpan ke database
@@ -131,7 +133,7 @@ export class AiScanService {
       userId,
       workspaceId,
       qrNodeId: qrNodeId || undefined,
-      location: [lng, lat],
+      location: [numLng, numLat],
       imageUrl,
       validationStatus,
       diagnosisResult: finalDiagnosis,

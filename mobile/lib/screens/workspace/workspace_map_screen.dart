@@ -66,7 +66,7 @@ class _WorkspaceMapScreenState extends State<WorkspaceMapScreen> {
       }
 
       _currentPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.best,
       );
 
       try {
